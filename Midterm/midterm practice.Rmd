@@ -1,0 +1,148 @@
+---
+title: "Practice midterm problems"
+author: "Ruoxin WANG"
+date: '2023-04-3'
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+# set global chunk options: images will be 7x5 inches
+knitr::opts_chunk$set(fig.width=7, fig.height=5)
+options(digits = 4)
+
+
+## indents are for indenting r code as formatted text
+## They may need to be adjusted depending on your OS
+# if your output looks odd, increase or decrease indent
+indent1 = '    '
+indent2 = '        '
+indent3 = '            '
+#library(tidyverse)
+#library(reshape2)
+```
+
+# Written exam part (You need to finish within 20 mins)
+
+1. Let the random variable $X$ has a pdf $f(x)=2 e^{-a x}$, for $0<x<\infty$, and zero elsewhere, where a is a positive real number.
+a) Find the value of $a$ 
+b) Find the cdf of $X$ and $P(X <5)$
+c) Find the mean of $X$
+d) Find the variance of $X$
+
+\newpage
+
+2. Let $X_{1}, \ldots, X_{n}$ be independently and identically distributed poisson random variables, with probability density function
+$$
+f(x)=\frac{\lambda^{x} e^{-\lambda}}{x !}
+$$
+for $x=0,1,2, \ldots$
+Derive the maximum likelihood estimator for $\hat{\lambda}$.
+
+\newpage
+
+# Coding questions
+
+3. Consider the IRIS data
+a) Obtain the scatterplot matrix among the variables Sepal length, Sepal width, petal length and petal width for the versicolor species 
+
+```{r indent=indent1}
+data("iris")
+# Your solution here
+panel.d <- function(x, ...){
+    usr <- par('usr'); on.exit(par(usr));
+}
+
+x <- scale(iris[iris$Species == 'versicolor', 1:4])
+r <- range(x)
+pairs(x, diag.panel=panel.d,xlim=r, ylim=r)
+```
+
+b) Plot a probability density function for each of variables on the diagonal panel of the scatterplot matrix in a) 
+
+```{r indent=indent1}
+# Put Your solution here
+panel.d <- function(x, ...){
+    usr <- par('usr'); on.exit(par(usr));
+    par(usr=c(usr[1:2], 0, .5))
+    lines(density(x))
+}
+
+x <- scale(iris[iris$Species == 'versicolor', 1:4])
+r <- range(x)
+pairs(x, diag.panel=panel.d,xlim=r, ylim=r)
+#library('GGally')
+#ggpairs(iris)
+```
+
+c) Obtain the scatterplot matrix among the variables Sepal length, Sepal width, petal length and petal width for all the three species, which are separated by different colours or different point characters 
+
+```{r indent=indent1}
+# Put Your solution here
+library(lattice)
+splom(~iris[1:4], groups = Species, data = iris, pch = c(1,2,3), cex = c(.5, .5, .5))
+```
+
+d) Interpretate your findings in scatterplot matrix c), i.e. comparison among the species, association between any pairs of the variables. 
+
+```{r indent=indent1}
+# Put Your solution here
+
+```
+
+e) Obtain the boxplots of Sepal length and Sepal width. Obtain the boxplots of Petal length with respect to different species.
+
+```{r indent=indent1}
+# Put Your solution here
+boxplot(iris$Sepal.Length ~ iris$Sepal.Width)
+boxplot(iris$Petal.Length ~ iris$Species)
+```
+
+4. The standard Laplace distribution has density $f(x)=\frac{1}{2} e^{-|x|}, x \in \mathbb{R}$. Use the inverse transform method to generate a random sample of size 1000 from this distribution. Plot the density histgram of the sample. Print out the first 20 observations. (Hint: when you solve the CDF $F_X(t)$, you need to consider two cases, $t \leq 0$ and $t>0$, also for the random uniform $0<u<1/2$ and $1/2<u<1$).
+
+```{r indent=indent1}
+set.seed(20)
+# Put Your solution here
+n <- 1000
+u <- runif(n)
+#if(u > 0.5){
+#  x[u>=0.5] <- (-log(2-2*u[u>0.5]))
+#} else {
+#  x[u<0.5] <- log(2*u[u<0.5])
+#}
+x[u>=0.5] <- (-log(2-2*u[u>0.5]))
+x[u<0.5] <- log(2*u[u<0.5])
+
+hist(x, prob = TRUE)
+lines(density(x), prob=T)
+```
+
+5. We want to compute a Monte Carlo estimate of
+$$
+\int_{0}^{2} \frac{xe^{-x}}{1+x^2} \, dx
+$$
+using the importance sampling method. We choose two importance functions $f_1 =1/2$ which is the density of Uniform(0, 2) and $f_2 = \frac{2x}{ln(5)(1+x^2)}, 0<x<2$. Show your estimation results and their corresponding standard errors. To generate random numbers from distribution $f_2$, using inverse transform method, you need to find the CDF $F_X(t)$ of $f_2(x)$ and then find the inverse function of CDF. 
+
+```{r indent=indent1}
+set.seed(25)
+# Put Your solution here
+m <- 10000
+theta.hat <- se <- numeric(2)
+g <- function(x){
+  x*exp(-x)/(1+x^2)
+}
+
+# f1
+x <- runif(m, 0, 2)
+fg <- g(x) * 2
+theta.hat[1] <- mean(fg)
+se[1] <- sd(fg)
+
+# f2
+u <- runif(m)
+x <- sqrt(5^u-1)
+fg <- g(x) / (2*x/(log(5)*(1+x^2)))
+theta.hat[2] <- mean(fg)
+se[2] <- sd(fg)
+round(rbind(theta.hat, se), 3)
+```

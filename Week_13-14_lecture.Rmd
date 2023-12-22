@@ -1,0 +1,377 @@
+---
+title: 'DS4043: Introduction to Statistical Computing'
+author: "Dr. Zhijian Li"
+#date: "`r Sys.Date()`"
+output:
+  beamer_presentation: default
+  latex_engine: xelatex
+  html_document: default
+  html_notebook:
+    colortheme: default
+  ioslides_presentation:
+    widescreen: true
+    colortheme: default
+    css: ../custom.css
+    fontfamily: mathpazo
+    wide: yes
+  slidy_presentation: default
+---
+
+
+
+## Linear Regression Models and the Class "lm"
+
+- Use $\operatorname{lm}$ (formula1) for fitting a linear regression model.
+- The fitted model, say $lm1$, is an object belonging to the class "lm".
+- We can treat the fitted models as lists and use "\$" to obtain components.
+- Alternatively, the following functions work on the "lm" objects: print, summary, coef, resid, fitted. The other functions include deviance, anova, predict, confint and plot.
+- For example, we can use _deviance(lm1)_ to get SSE for a model fit lm1; and
+use _abline(lm1)_ for LS line in simple linear regression; use _plot(lm1)_ for
+diagnostics graphs.
+
+## Linear Regression Models and the Class "lm"
+
+- Use predict( $lm1, \operatorname{list}(x.n=\mathrm{vec} 1, y.n=\mathrm{vec} 2))$ for prediction at $x.n=\mathrm{vec} 1$ and $y.n=vec2$. Add int="$c$" for confidence intervals, or int="p" for prediction intervals (default level is $95 \%$ ). Then we can use matlines to plot the confidence (or prediction) bounds.
+
+- Both $lm1$ and summary $(lm1)$ are lists. For example, the multiple coefficient of determination $R^{2}$ is given by summary $(lm1)[[8]]$.
+
+- Use "subset=vec1" as an argument in $lm$ to specify a subset of the data in regression. This can be used to, e.g. delete extreme points, run a fit using a training set.
+
+- For variable selection, use dropterm(model1) or addterm(model1). Alternatively, use stepAIC(model1) or step(model1) for automatic model selection using AIC criteria to minimize the AIC. Other criterion, such as Mallows $C_{p}$, can also be used.
+
+## Linear Statistical Models in R
+
+We introduce the following formulas in R. Let $x.n, y.n$ and $z.n$ be numeric vectors
+and let $x.f, y.f$ and $z.f$ be factor vectors.
+
+- $y \sim 1$ indicates the model $Y=\beta_{0}+\epsilon$ without any explanatory variables. It is clear that $\beta_{0}=E(Y)$.
+- $y \sim x.n$ is the linear model $Y=\beta_{0}+\beta_{1} X+\epsilon$
+- $y \sim x.n-1$ is the linear model without intercept term $Y=\beta_{1} X+\epsilon$
+- $y \sim x.n+y.n$ is the linear model $Y=\beta_{0}+\beta_{1} X_{1}+\beta_{2} X_{2}+\epsilon$. To add an interaction, use $y \sim x.n * y.n$ with model $Y=\beta_{0}+\beta_{1} X_{1}+\beta_{2} X_{2}+\beta_{3} X_{1} X_{2}+\epsilon$.
+
+## Linear Statistical Models in R
+
+- Use $y \sim x.n * y.n-x.n$ for the model $Y=\beta_{0}+\beta_{2} X_{2}+\beta_{3} X_{1} X_{2}+\epsilon$.
+- Use $y \sim x.n+\mathrm{I}\left(x.n^{3}\right)$ for the model $Y=\beta_{0}+\beta_{1} X_{1}+\beta_{2} X_{1}^{3}+\epsilon$. We can also use $y \sim$ poly$(x.n, 2)+y.n$ for the model $Y=\beta_{0}+\beta_{1} X_{1}+\beta_{2} X_{1}^{2}+\beta_{3} X_{2}+\epsilon$.
+
+## Linear Statistical Models in R
+
+- Use $y \sim(x.n+y.n+z.n)^2$ for the linear model with up to two way interactions (but not squared terms).
+- $y \sim x.f$ is one-way ANOVA model $Y_{i j}=\alpha_{0}+\alpha_{i}+\epsilon_{i j}$ where $\sum \alpha_{i}=0$.
+- $y \sim x.f-1$ is one-way ANOVA without intercept.
+- $y \sim x.f+y.f$ is two-way ANOVA model without interaction $Y_{i jk}=\alpha_{0}+\alpha_{i}+\beta_{j}+\epsilon_{i j k}$ (e.g. randomized block design). Here only main effects are considered.
+- $y \sim x.f * y.f$ is two-way ANOVA model with interaction $Y_{i j k}=\alpha_{0}+\alpha_{i}+\beta_{j}+\gamma_{i j}+\epsilon_{i j k}$
+- $y \sim x.f * y.f * z.f$ is factorial (three-way) ANOVA model. To delete the three way interaction term, for example, use $y \sim x.f * y.f * z.f-x.f:y.f:z.f$.
+
+## Fertility Rates example
+
+UN11: National statistics from the United Nations mostly from 2009-2011
+
+- Description:National health, welfare, and education statistics for 210 places, mostly UN members, but also other areas like Hong Kong that are not independent countries.
+
+```{r message=FALSE}
+library(alr4)
+```
+
+## Fertility Rates example (do regression)
+
+```{r}
+um.lm1 = lm(fertility~log(ppgdp), data = UN11)
+summary(um.lm1)
+```
+
+## Fertility Rates example (check model assumption)
+
+```{r}
+par(mfrow = c(2,2))
+plot(um.lm1)
+```
+
+## Fertility Rates example (boxCox Transformation)
+
+```{r out.width="50%"}
+bc <- boxCox(um.lm1)
+lambda.opt <- bc$x[which.max(bc$y)]
+lambda.opt
+```
+
+
+## Fertility Rates example
+
+```{r}
+um.lm = lm(log(fertility)~log(ppgdp), data = UN11)
+summary(um.lm)
+```
+
+## Fertility Rates example
+
+```{r}
+par(mfrow = c(2,2))
+plot(um.lm)
+```
+
+## Interaction between categorical and numeric variables
+
+We want to fit the nonparallel model
+$$
+Y_i = \beta_0 +\beta_1 x_{i1}+\beta_2 x_{i2}+\beta_3 x_{i3}+\beta_{13} x_{i1}x_{i3}+\beta_{23} x_{i2}x_{i3}+\epsilon_i
+$$
+```{r}
+np.lm = lm(lifeExpF ~ group + log(ppgdp) 
+           + group:log(ppgdp), data = UN11)
+summary(np.lm)
+```
+
+## Highway data example
+
+The data comes from a unpublished master's paper by Carl Hoffstedt. They relate the automobile accident rate, in accidents per million vehicle miles to several potential terms. The data include 39 sections of large Highways in the state of Minnesota in 1973. The goal of this analysis was to understand the impact of design variables, acpts, slim, Sig, and shld that are under the control of the Highway department, on accidents.
+
+```{r out.width="50%"}
+library(alr4)
+pairs(Highway[c('rate', 'len', 'adt', 'trks', 'slim', 'shld', 'sigs')])
+```
+
+## Highway data example (model transform)
+Before considering transformations for the response rate, we will choose transformations for the predictors. We can use a multivariate version of the Box-Cox method which will try to choose power transformations so that the predictors have approximately a multivariate normal distribution.
+
+```{r}
+Highway$sigs1 <- with(Highway, (sigs * len + 1)/len)
+hwy.pt = powerTransform(cbind(len, adt, trks, shld, sigs1) ~ 1, Highway) 
+summary(hwy.pt)
+```
+
+## Highway data example (model transform)
+
+```{r}
+testTransform(hwy.pt, lambda = c(0, 0, 0, 1, 0))
+```
+
+## Highway data example (model transform)
+
+For the response
+```{r out.width="60%"}
+Highway_trsf = with(Highway, data.frame(rate, log(len), 
+      log(adt), log(trks), slim, shld, log(sigs1)))
+hwy.lm = lm(rate~., data = Highway_trsf) 
+boxCox(hwy.lm)
+```
+
+## Highway data example (model transform)
+
+```{r}
+rate.pt = powerTransform(rate~., Highway_trsf) 
+summary(rate.pt)
+```
+
+
+## Highway data example (model selection)
+
+```{r}
+Highway$sigs1 = with(Highway, (sigs*len + 1)/len)
+# Full mode predictor formula
+f = ~ log(len) + log(adt) + log(trks) + log(sigs1)+
+  lane + slim + shld + lwid + acpt + itg+ htype
+# The base model
+m0 = lm(log(rate) ~ log(len), Highway)
+m.forward = step(m0,f,direction='forward')
+# Use AIC by default
+```
+
+## Highway data example (model selection)
+
+```{r}
+m.forward
+```
+
+
+## Highway data example (model selection)
+
+```{r}
+m1 = update(m0, f) #full model
+m.backward = step(m1, scope = c(lower = ~ log(len)), 
+                  direction = 'backward')
+```
+
+## Highway data example (model selection)
+
+```{r}
+m.backward
+```
+
+
+
+
+## Principle Component Analysis
+
+- A data set may have a large number of correlated variables, and PCA is a method that provides an approximate representation in a lower dimensional space.
+- Suppose $X=\left(X_{1}, \ldots, X_{p}\right)^{\top}$ is a random vector with $E(X)=\boldsymbol{\mu}$ and $\operatorname{Cov}(X)=\boldsymbol{\Sigma}$.
+A set of $p$ PCs are found, i.e. $Z_{i}=v_{i}^{T}(X-\mu), i=1,2, \ldots, p$, where $v_{1}, \ldots, v_{p}$ are the standardized eigenvectors of $\boldsymbol{\Sigma}$
+
+## Principle Component Analysis
+
+The set of principal components $\left\{Z_{1}, \ldots, Z_{p}\right\}$ satisfy
+
+- 1.$\operatorname{Var}\left(Z_{i}\right)=\lambda_{i}, i=1, \ldots, p$;
+- 2.$\operatorname{Var}\left(Z_{1}\right) \geq \operatorname{Var}\left(Z_{2}\right) \geq \cdots \geq \operatorname{Var}\left(Z_{p}\right) \geq 0$;
+- 3.$\operatorname{Cor}\left(Z_{i}, Z_{j}\right)=0, i \neq j$.
+
+It follows that for any $k<p$, the first $k$ PCs $\left\{Z_{1}, \ldots, Z_{k}\right\}, k \leq p$ capture
+$$
+\frac{\sum_{i=1}^{k} \operatorname{Var}\left(Z_{i}\right)}{\sum_{j=1}^{p} \operatorname{Var}\left(Z_{j}\right)}=\frac{\sum_{i=1}^{k} \lambda_{i}}{\sum_{j=1}^{p} \lambda_{j}}
+$$
+of $\operatorname{Var}(X)$. The coordinates of the eigenvectors $v_{i}$ are called the loadings.
+
+## Example (open and closed book exams)
+
+The _scor(bootstrap)_ data has exam scores in five subjects: mechanics, vectors, algebra, analysis, and statistics, for 88 students. Mechanics and vectors were closed book, and the other three examinations were open book.
+
+```{r}
+library(bootstrap)
+str(scor)
+```
+
+## Example (open and closed book exams)
+
+```{r}
+pairs(scor)
+```
+
+
+## Example (open and closed book exams)
+
+```{r}
+cor(scor)
+```
+
+## Example (open and closed book exams)
+
+```{r}
+n <- nrow(scor)
+x <- scale(scor) #center and scale
+s <- cov(x)
+e <- eigen(s)
+lam <- e$values #vector of eigenvalues
+P <- e$vectors #matrix of eigenvectors
+print(lam)
+print(P)
+```
+
+## Example (open and closed book exams)
+
+```{r out.width="85%"}
+par(mfrow=c(1,2))
+plot(lam, type = "b", xlab = "eigenvalues", main = "")
+barplot(lam, xlab = "eigenvalues")
+```
+
+## Example (open and closed book exams)
+
+```{r}
+tab <- rbind(lam / sum(lam), cumsum(lam) / sum(lam))
+tab
+```
+
+## Example (open and closed book exams)
+
+```{r}
+z <- x %*% P
+dim(z)
+head(z)
+```
+
+## Example (open and closed book exams)
+
+```{r out.width="50%"}
+pc <- prcomp(scor, center = TRUE, scale = TRUE)
+summary(pc)
+```
+
+## Example (open and closed book exams)
+
+```{r}
+df <- scor[1:5, ]
+predict(pc, newdata = df) #same as z above
+```
+
+## Example (open and closed book exams)
+
+```{r}
+head(x %*% pc$rotation, 5)
+```
+
+## Permutation Test
+
+- Permutation tests are based on resampling.
+- The samples are drawn without replacement.
+- They are often applied as a nonparametric test of the general hypothesis, i.e. $H_{0}: F=G$ vs $H_{1}: F \neq \mathbf{G}$
+- $F$ and $G$ are two unspecified distributions.
+- Replicates of a two-sample test statistic that compares the distributions are generated by resampling without replacement from the pooled sample.
+
+## Permutation Distribution
+
+- Suppose $Z=\left\{X_{1}, \ldots X_{n}, Y_{1}, \ldots, Y_{m}\right\}$, where $F_{X}$ and $F_{Y}$ are the distribution functions for $X$ and $Y$ respectively
+- Let $Z^{*}=\left(X^{*}, Y^{*}\right)$ represent a partition of the pooled sample $Z=X \cup Y$, where $X^{*}$ has $n$ elements and $Y^{*}$ has $N-n=m$ elements 
+
+- $Z^{*}$ corresponds to a permutation $\pi$ of $v=\{1, \ldots, \mathrm{n}, \mathrm{n}+1, \ldots \mathrm{n}+\mathrm{m}\}=\{1, \dots, \mathrm{N}\}$, where $Z_{i}^{*}=Z_{\pi(i)}$.
+- Hence there are $\binom{N}{n}$ different ways to partition the pooled sample $Z$ into two subsets of size $n$ and $m$.
+- A random selected $Z^{*}$ has probability $1 /\binom{N}{n}$.
+
+## Approximate Permutation Test Procedure
+
+Under hypotheses: $H_{0}: F_{X}=F_{Y}$ vs $H_{1}: F_{X} \neq F_{Y}$
+
+- 1. Compute the observed test statistics $\hat{\theta}(X, Y)=\hat{\theta}(Z, v)$
+- 2. For each replicate, $b=1, \dots, B$, generate a random permutation $\pi_{b}=\pi(v)$, and compute the statistics $\hat{\theta}^{(b)}=\hat{\theta}^{*}\left(Z, \pi_{b}\right)$
+- 3. If large values of $\hat{\theta}$ support the alternative, compute the empirical p-value by $\hat{p}=\frac{1+\sum_{b=1}^{B} I\left(\widehat{\theta}^{(b)} \geq \widehat{\theta}\right)}{B+1}$
+- 4. Reject $H_{0}$ at significant level $\alpha$ if $\hat{p} \leq \alpha$
+
+## Example
+
+The chickwts data in R. Weights in grams are recorded, for six groups of
+newly hatched chicks fed different supplements. There are six types of feed supplements. A quick graphical summary of the data can be displayed by boxplot(formula(chickwts)). The plot suggests that soybean and linseed groups may be similar. The distributions of weight for these two groups are compared below.
+
+## Example
+
+```{r out.width="90%"}
+attach(chickwts)
+boxplot(formula(chickwts))
+```
+
+## Example
+
+```{r}
+attach(chickwts)
+x <- sort(weight[feed == "soybean"])
+y <- sort(weight[feed == "linseed"])
+detach(chickwts)
+```
+
+## Example
+
+```{r}
+R <- 1000 #number of replicates
+z <- c(x, y) #pooled sample
+K <- 1:length(z)
+reps <- numeric(R) #storage for replicates
+t0 <- t.test(x, y)$statistic
+for (i in 1:R) {
+  #generate indices k for the first sample
+  k <- sample(K, size = length(x), replace = FALSE)
+  x1 <- z[k]
+  y1 <- z[-k] #complement of x1
+  reps[i] <- t.test(x1, y1)$statistic
+}
+p <- mean(c(t0, reps) >= t0)
+p
+```
+
+## Example
+
+```{r out.width="80%"}
+hist(reps, main = "", freq = FALSE, xlab = "T ",
+     breaks = "scott")
+#observed T
+points(t0, 0, cex = 1, pch = 16) 
+```
+
+

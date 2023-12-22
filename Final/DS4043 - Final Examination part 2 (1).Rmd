@@ -1,0 +1,358 @@
+---
+title: "DS4043 - Final Examination part 2"
+author: "Name: __Ruoxin_WANG___         Grade: _________"
+output: pdf_document
+---
+
+
+```{r setup, include=FALSE}
+library(knitr)
+# set global chunk options: images will be 7x5 inches
+knitr::opts_chunk$set(fig.width=7, fig.height=5)
+options(digits = 4)
+
+
+## indents are for indenting r code as formatted text
+## They may need to be adjusted depending on your OS
+# if your output looks odd, increase or decrease indent
+indent1 = '    '
+indent2 = '        '
+indent3 = '            '
+#library(tidyverse)
+#library(reshape2)
+```
+
+## Coding Part
+Before we start the exam, please install the following packages:
+
+```{r warning=FALSE, results='hide'}
+# install.packages("corrplot")
+# install.packages("stats4")
+# install.packages("MASS")
+```
+
+3. (20 points) In this question, we will use the dataset called _swiss_. This dataset is in our R package. We can simply call the data
+
+```{r indent=indent1}
+data(swiss)
+```
+
+(a) (2 points) Show the number of observations and the names of variables in this data frame.
+
+```{r indent=indent1}
+# Put your code here
+obs_num <- nrow(swiss)
+var_name <- names(swiss)
+cat("Number of observations:", obs_num, "\n")
+cat("Name of variables:", var_name, "\n")
+```
+    
+(b) (4 points) Remove all observations from the data frame that the infant.mortality is less than 18.4 and call the new data frame _swiss.new_. Then use the _apply_ function on this new data frame to calculate the mean and variance of each variable.
+
+```{r indent=indent1}
+# Put your code here
+swiss.new <- swiss[Infant.Mortality >= 18.4,]
+swiss.new
+
+# using apply function to calculate mean of each variable
+print("using apply function to calculate mean of each variable")
+apply(swiss.new, 2, mean)
+
+# using apply function to calculate variance of each variable
+apply(swiss.new, 2, var)
+print("using apply function to calculate variance of each variable")
+
+```
+
+
+(c) (4 points) Considering the data frame _swiss_, select the data such that the Catholic is among the 10% to 40% quantile range and make it a data frame called _M.catholic_. Print out the first 4 rows of _M.catholic_. (This question is Not Related to (b))
+
+```{r indent=indent1}
+# Put your code here
+cath <- swiss$Catholic
+lower_r <- quantile(cath, probs = seq(0, 1, 0.1))
+higher_r <- quantile(cath, probs = seq(0, 1, 0.4))
+M.catholic <- swiss[Catholic > lower_r & Catholic < higher_r,]
+head(M.catholic)
+```
+
+(d) (4 points) Attach the data frame _swiss_. Plot the **probability density** histograms of _Fertility_, _Agriculture_, _Catholic_ and _Infant.Mortality_ where _Fertility_ has 9 bins; _Agriculture_, _Catholic_ and _Infant.Mortality_ use the Sturges' method, Scott's method and Freedman-Diaconis' method respectively in the histograms function. (Note: you can directly use the arguments in the histogram function and no need to use formulas of these bandwidth methods) Display these four pictures as 2X2 by row in one plot.
+
+```{r indent=indent1}
+# Put your code here
+library(MASS) #for geyser and truehist
+#attach(swiss);
+#hist(swiss$Fertility, breaks = 9, freq = FALSE, main="Histogram of Fertuility"); # Use density.
+
+# Agriculture.
+agr <- swiss$Agriculture
+n <- length(agr)
+# calc breaks according to Sturges’ Rule
+nclass <- ceiling(1 + log2(n))
+cwidth <- diff(range(agr) / nclass)
+breaks_1 <- min(agr) + cwidth * 0:nclass
+#h.sturges <- hist(agr, breaks = breaks, freq = FALSE,main="Histogram of Agriculture")
+
+# Catholic.
+cath <- swiss$Catholic
+n <- length(cath)
+# rounding the constant in Scott’s rule
+# and using sample standard deviation to estimate sigm
+h <- 3.5 * sd(cath) * n^(-1/3)
+# number of classes is determined by the range and h
+m <- min(cath)
+M <- max(cath)
+nclass <- ceiling((M - m) / h)
+breaks_2 <- m + h * 0:nclass
+#h.scott<-hist(cath, breaks=breaks, freq=FALSE,main="Histogram of Catholic")
+
+# Infant.Mortality
+infm <- Infant.Mortality
+n <- length(infm)
+h <- 2*IQR(infm)*n^(-1/3)
+# number of classes is determined by the range and h
+m <- min(infm)
+M <- max(infm)
+nclass <- ceiling((M - m) / h)
+breaks_3 <- m + h * 0:nclass
+
+par(mfrow=c(2,2))
+hist(swiss$Fertility, breaks = 9, freq = FALSE, main="Histogram of Fertuility"); # Use density.
+h.sturges <- hist(agr, breaks = breaks_1, freq = FALSE,main="Histogram of Agriculture")
+h.scott<-hist(cath, breaks=breaks_2, freq=FALSE,main="Histogram of Catholic")
+h.scott<-hist(infm, breaks=breaks_3, freq=FALSE,main="Histogram of Infant.Mortality")
+```      
+
+(e) (3 points) Attach the data frame _swiss_. Find the correlation matrix of _Fertility_, _Agriculture_, _Education_ and _Infant.Mortality_. Then get the correlation plot and make the visualization method as **ellipse**, display the **full** matrix, the text label as **red** color, and show the diagonal elements.
+
+```{r message=FALSE, indent=indent1, out.width="50%"}
+library(corrplot)
+# Put your code here
+corrMat <- cor(swiss[, c('Fertility', 'Agriculture', 'Education', 'Infant.Mortality')]);
+corrplot(corrMat, type = "full", method = "ellipse", addCoef.col = "red", diag=TRUE, tl.col="red", tl.srt=45);
+
+```
+    
+(f) (3 points) Attach the data frame _swiss_. Plot the Boxplot of _Fertility_, _Agriculture_, _Education_ and _Infant.Mortality_ in one boxplot picture.
+
+```{r indent=indent1, out.width="50%"}
+# Put your code here
+boxplot(c(Fertility,Agriculture,Education,Infant.Mortality), data=swiss,main="Boxplot"); 
+``` 
+
+4. (10 points) Simulate a continuous Exponential-Gamma mixture. Suppose that the rate parameter $\lambda$ has Gamma$(r, \beta)$ distribution and $Y$ has Exp$(\lambda)$ distribution. That is, $(Y \mid \lambda) \sim f_{Y}(y \mid \lambda)=\lambda e^{-\lambda y}$; **in other words, the distribution of $Y$ depends on $\lambda$ and $\lambda$ is generated from the Gamma$(r, \beta)$ distribution**.
+
+(a) (6 points) Write a function to generate $n = 100$ random observations from this mixture with shape $r=4$ and rate $\beta=2$. (Hint: you should use gamma distribution to generate $\lambda$ = rgamma(n,r,beta), and then use $\lambda$ to generate $Y$).
+Print out the first 10 observations of the generated sample.
+
+```{r indent=indent1}
+set.seed(10)
+# Put your code here
+n <- 100;
+r = 4; beta = 2;
+lambda <- rgamma(n, r, beta);
+y <- rexp(n, lambda);
+head(y, 10)
+```
+    
+(b) (4 points) Plot the density histogram of the generated sample using the exact Scott's method (**NOT** the one in the histogram function) and plot the sample density curve on the histogram.
+
+```{r indent=indent1}
+# Put your code here
+library(MASS) #for geyser and truehist
+n <- length(y)
+# rounding the constant in Scott’s rule
+# and using sample standard deviation to estimate sigma
+h <- 3.5 * sd(y) * n^(-1/3)
+# number of classes is determined by the range and h
+m <- min(y)
+M <- max(y)
+nclass <- ceiling((M - m) / h)
+breaks <- m + h * 0:nclass
+
+h.scott<-hist(y, breaks=breaks, freq=FALSE,main="")
+lines(density(y))  
+```
+
+5. (14 points) We want to compute a Monte Carlo estimate of
+$$
+\int_{0}^{2} xe^{-x} \, dx
+$$
+using the importance sampling method. We choose two importance functions $f_1 =1/2$ which is the density of Uniform(0, 2) and $f_2 = \frac{e^{-x}}{(1-e^{-2})}, 0 <x<2$. Show your estimation results and their corresponding standard errors using 10000 replications. **(Hint: Use the inverse transform method to generate sample from $f_2$)**
+    
+```{r indent=indent1}
+set.seed(39)
+# Put your code here
+m <- 10000
+theta.hat <- se <- numeric(2)
+g <- function(x) {
+  x * exp(-x)
+}
+
+# using f1 = 1/2.
+x <- runif(m, 0, 2) 
+fg <- g(x) / 0.5
+theta.hat[1] <- mean(fg)
+se[1] <- sd(fg)
+
+# using f2 = exp(-x)/(1-exp(-2)).
+u <- runif(m)
+x <- log((1-exp(-2))*u)
+fg <- g(x) / (exp(-x)/(1-exp(-2)))
+theta.hat[2] <- mean(fg)
+se[2] <- sd(fg)
+theta.hat
+se
+```       
+    
+6. (18 points)  Consider the random variables $X_{1}, \ldots, X_{n}$ that are i.i.d. with a mixture density, i.e.
+$$
+(1-p) N\left(\mu=1, \sigma^{2}=4\right)+p \mathrm{Exp}\left(3\right),
+$$
+where $\mathrm{Exp}\left(3\right)$ is the exponential distribution with rate parameter 3.
+We have $\alpha=0.05, p=0.4$ and $n=1000$. Let $k_{1}$ denote the sample kurtosis of random variable $X$ defined as
+$$
+k_{1}=\frac{\frac{1}{n} \sum_{i=1}^{n}\left(X_{i}-\bar{X}\right)^{4}}{\left(\frac{1}{n} \sum_{i=1}^{n}\left(X_{i}-\bar{X}\right)^{2}\right)^{2}} - 3.
+$$
+and we denote the excess kurtosis as $Kt_1$.
+
+(a) (5 points) Generate a sample from this mixture normal density described above and compute $k_1$ of this sample.
+
+```{r indent=indent1}
+set.seed(99)
+# Put your code here
+n <- 1000;
+alpha <- 0.05
+p <- 0.4
+x1 <- rnorm(n, 1, 2);
+x2 <- rexp(n, 3);
+
+u <- runif(n);
+k <- as.integer(u > p) #vector of 0s and 1s;
+x <- k * x1 + (1-k) * x2 #the mixture;
+
+x_mean = mean(x)
+s_1 = 0
+s_2 = 0
+k_1 <- function(x){
+  for(i in 1:n){
+    s_1 = s_1 + (x[i]-x_mean)^4
+    s_2 = s_2 + (x[i]-x_mean)^2
+  }
+  res = mean(s_1)/(mean(s_2))^2 - 3
+  return(res)
+}
+
+k_1_est <- k_1(x)
+k_1_est
+```
+
+
+(b) (8 points) Compute the bootstrap and jackknife estimate of the bias and the standard error of the estimator $k_1$. Compare the results of bootstrap and jackknife. Note: we use $m=1000$ for the bootstrap replicates.
+
+```{r indent=indent1}
+# Put your code here
+set.seed(95)
+n <- 1000
+
+## bootstrap method
+m<- 1000
+
+# use bootstrap method to estimate bias.
+#sample estimate for n=15
+theta.hat <- cor(k_1_est)
+#bootstrap estimate of bias
+B <- 2000 #larger for estimating bias
+theta.b <- numeric(B)
+for (b in 1:B) {
+  i <- sample(1:n, size = n, replace = TRUE)
+  LSAT <- law$LSAT[i]
+  GPA <- law$GPA[i]
+  theta.b[b] <- cor(LSAT, GPA)
+}
+boot_bias <- mean(theta.b - theta.hat)
+
+# use bootstrap method to estimate standard error.
+#set up the bootstrap
+B <- 200 #number of replicates
+R <- numeric(B) #storage for replicates
+#bootstrap estimate of standard error of R
+for (b in 1:B) {
+  #randomly select the indices
+  i <- sample(1:n, size = n, replace = TRUE)
+  LSAT <- law$LSAT[i] #i is a vector of indices
+  GPA <- law$GPA[i]
+  R[b] <- cor(LSAT, GPA)
+}
+boot_sd <- sd(R)
+
+
+
+## jackknife method
+# Calculate the jackknife estimates.
+theta.jack <- numeric(n)
+theta.hat <- cor(law$LSAT,law$GPA)
+for (i in 1:n)
+  theta.jack[i] <- cor(law$LSAT[-i],law$GPA[-i])
+
+# Calculate the jackknife estimate of the bias.
+jack_bias <- (n - 1) * (mean(theta.jack) - theta.hat)
+
+# Calculate the jackknife estimate of the standard error。
+jack_se <- sqrt((n - 1) * mean((theta.jack - mean(theta.jack))^2))
+
+
+
+## Compare Result
+cat("Bootstrap estimate of bias:", boot_bias, "\n")
+cat("Bootstrap estimate of standard error:", boot_sd, "\n")
+cat("Jackknife estimate of bias:", jack_bias, "\n")
+cat("Jackknife estimate of standard error:", jack_se, "\n")
+```
+
+(c) (5 points) Consider the hypotheses for the excess kurtosis $H_{0}: Kt_{1}=0$ vs $H_{1}: Kt_{1} \neq 0$. The test statistic is $G_2/se(G_2)$ where
+$$
+G_2 = \frac{n-1}{(n-2)(n-3)}[(n+1)k_1+6]
+$$
+and $se(G_2) = \sqrt{\frac{24}{n}}(1-\frac{2}{n})$. The test statistic is approximately standard normal, so we reject the null hypothesis if the test statistic is beyond the critical z-value with significance level $\alpha=0.05$ (note: two-side test). Use the Monte Carlo method to estimate **empirical power** of the hypotheses for the data generated as like in (a). 
+The number of simulation is $m=1000$.
+
+```{r indent = indent1}
+# Put your code here
+m <- 1000;  #num. repl.
+n= 1000;
+set.seed(75)
+Gtests <- numeric(m)  #test decisions 
+
+```
+
+
+7. (8 points) Let $Y_{1}, Y_{2}, \ldots, Y_{n}$ denote a random sample from the probability density function
+$$
+f(y \mid \theta)= \begin{cases} (\frac{2y}{\theta})e^{-y^2/\theta}, & y > 0 \\ 0, & \text { elsewhere. }\end{cases}
+$$
+(a) (3 points) Assume $\theta = 2$, use the inverse transform method to generate a sample with sample size $n=200$ from this density function.
+
+```{r indent=indent1}
+set.seed(27)
+# Put your code here
+n <- 200
+u <- runif(n)
+x <- sqrt(2*log(u-1))
+x
+```
+
+(b) (2 points) Given the sample you generated in (a), use the analytical solution of MLE estimator of $\theta$ to estimate $\hat{\theta}$. **Note: you have already solved the expression of $\hat{\theta}$ in question 2, hand written part.**
+
+```{r indent=indent1}
+# Put your code here
+library(stats4)
+mlogL = x^2/length(x)
+fit <- mle(mlogL)
+```
+(c) (3 points) Given the sample you generated in (a), use the _mle_ function in R to estimate $\hat{\theta}$. Choose the initial value of $\theta=0.5$. (You can choose the lower bound = 0.1 and upper bound = 4)
+
+```{r indent=indent1}
+# Put your code here
+
+```

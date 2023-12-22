@@ -1,0 +1,485 @@
+---
+title: 'DS4043: Introduction to Statistical Computing'
+author: "Dr. Zhijian Li"
+#date: "`r Sys.Date()`"
+output:
+  beamer_presentation: default
+  latex_engine: xelatex
+  html_document: default
+  html_notebook:
+    colortheme: default
+  slidy_presentation: default
+  ioslides_presentation:
+    colortheme: default
+    css: ../custom.css
+    fontfamily: mathpazo
+    wide: yes
+---
+
+
+## Overview
+
+- Random Variable and Probability
+    
+- Some Discrete Distributions
+
+- Some Continuous Distributions
+
+- Limit Theorems
+
+- Statistics
+
+## Distribution Function
+
+- The cumulative distribution function (cdf) of a random variable $X$ is $F_X(x)= P(X \leq x), X \in R.$
+
+- $F_X$ is non-decreasing.
+
+- $F_X$ is right continuous, i.e. 
+  $$\lim_{\epsilon \to 0^+} F_X(x+\epsilon) = F_X(x)$$
+
+- Following property
+  $$\lim_{x \to -\infty} F_X(x) = 0$$ 
+  and 
+  $$\lim_{x \to \infty} F_X(x) = 1$$ 
+
+## Density Function
+
+- Discrete: $F_X(x)$ is a step function
+
+    * Probability mass function (pmf): $p_X(x) = P(X=x) = F_X(x) - F_X(x^{-})$
+    * $0 \leq p_X(x) \leq 1$
+    * $F_X(x) = p(X \leq x) = \sum_{k\leq x} p_X(k)$
+    * $\sum_{k\in S} p_X(k) = 1$ where $S$ is the sample space.
+
+- Continuous: $F_X(x)$ is a continuous function
+
+    * Probability density function(pdf): $f_X(x) = F_X'(x) \geq 0$
+    * $F_X(x) = p(X \leq x) = \int_{-\infty}^x f_X(t) dt$
+    * $\int_{-\infty}^{\infty} f_X(t) dt = 1$
+    * Joint pdf and Joint cdf: $F_{(X,Y)}(x,y) = \int_{-\infty}^y\int_{-\infty}^x f_{X,Y}(t,s) \,dt\,ds$
+    * Marginal pdf: $f_X(x) = \int_{y} f_{X,Y}(x,y)\,dy$ and $f_Y(y) = \int_{x} f_{X,Y}(x,y)\,dx$
+
+## The Law of Total Probability
+
+- For continuous random variables $X$ and $Y$, we have the distributional form of the Law of Total Probablility
+  $$f_Y(y) = \int_{-\infty}^{\infty} f_{Y|X=x}(y) f_X(x) \, dx$$
+
+- For discrete random variables $X$ and $Y$, we can write the distributional form of the Law of Total Probability as 
+  $$P(Y =y) = \sum_x P(Y=y|X=x)P(X=x)$$
+
+## Bayes' Theorem
+
+Bayes' Theorem provides a method for inverting conditional probabilities. In its simplest form, if $A$ and $B$ are events and $P(B)>0$, then
+$$
+P(A \mid B)=\frac{P(B \mid A) P(A)}{P(B)}
+$$
+Often the Law of Total Probability is applied to compute $P(B)$ in the denominator. These formulas follow from the definitions of conditional and joint probability.
+
+For continuous random variables the distributional form of Bayes' Theorem is
+$$
+f_{X \mid Y=y}(x)=\frac{f_{Y \mid X=x}(y) f_{X}(x)}{f_{Y}(y)}=\frac{f_{Y \mid X=x}(y) f_{X}(x)}{\int_{-\infty}^{\infty} f_{Y \mid X=x}(y) f_{X}(x) dx}.
+$$
+For discrete random variables
+$$
+P(X=x \mid Y=y)=\frac{P(Y=y \mid X=x) P(X=x)}{\sum_{x}\{P(Y=y \mid X=x) P(X=x)\}}.
+$$
+
+## Expectation, Variance, and Moments
+
+- Continuous:
+$$
+\begin{aligned}
+&\circ \mu_{X}=E(X)=\int_{-\infty}^{\infty} x f_{X}(x) d x, E(g(X))=\int_{-\infty}^{\infty} g(x) f_{X}(x) dx \\
+&\circ E\left(X^{r}\right)=\int_{-\infty}^{\infty} x^{r} f_{X}(x) dx
+\end{aligned}
+$$
+- Discrete: $E(X)=\sum_{\left\{x \in S\right\}} x f_{X}(x)$
+
+- Assume $E(|X|)<\infty$,
+  $$\sigma_{X}^{2}=\operatorname{Var}(X)=E[X-E(X)]^{2}=E\left(X^{2}\right)-(E[X])^{2}$$
+- $\sigma_{X, Y}=\operatorname{Cov}(X, Y)=E[(X-E[X])(Y-E[Y])]=E(X Y)-E(X)(Y)$
+- $\rho_{X, Y}=\operatorname{Cor}(X, Y)=\frac{\sigma_{X, Y}}{\sigma_{X} \sigma_{Y}}, X$ and $Y$ are uncorrelated if $\rho_{X, Y}=0$
+
+## Properties of Expected Value and Variance
+
+_Suppose $X$ and $Y$ are random variables and a,b are constant values:_
+
+- $E[a X+b]=a E[X]+b$
+- $E[X+Y]=E[X]+E[Y]$
+- If $X$ and $Y$ are independent, $E(X Y)=E(X) E(Y)$
+- $\operatorname{Var}(b)=0$
+- $\operatorname{Var}(a X+b)=a^{2} \operatorname{Var}(X)$
+- $\operatorname{Var}(X+Y)=\operatorname{Var}(X)+\operatorname{Var}(Y)+2 \operatorname{Cov}(X, Y)$
+- $E(X)=E[E[X \mid Y]]$
+- $\operatorname{Var}(X)=E[\operatorname{Var}(X \mid Y)]+\operatorname{Var}(E[X \mid Y])$
+
+## A practice example
+
+- Suppose $X$ has density
+\[f_X(t)=\begin{cases} \frac{c}{t^4} & t>1\\
+0 & \text{otherwise}
+\end{cases}\]
+where $c$ is a constant. Find 
+
+    * (a) the value of c
+    * (b) $E(X)$
+    * (c) $\operatorname{Var}(x)$
+    
+## A practice example
+
+- (a) Since $f_X$ is a density, we must have $\int_{-\infty}^\infty f_X(t)\,dt=1$.
+				\[\int_{-\infty}^\infty f_X(t)\,dt
+					=\int_1^\infty\frac{c}{t^4}\,dt
+					=c\int_1^\infty t^{-4}\,dt
+					=\left.-\frac{c}{3} t^{-3}\right|_1^\infty
+					=\frac{c}{3}.\]
+				Therefore, $\frac{c}{3}=1$, or $c=3$.
+				
+- (b)	
+$$
+\begin{aligned}
+E[X]&=\int_{-\infty}^\infty tf_X(t)\,dt	=\int_1^\infty t\frac{c}{t^4}\,dt \\
+				&=3\int_1^\infty t^{-3}\,dt =\left.-\frac{3}{2} t^{-2}\right|_1^\infty=\frac{3}{2}.
+\end{aligned}
+$$
+					
+- (c) First, we compute $E[X^2]$:
+				\[E[X^2]
+					=\int_{-\infty}^\infty t^2f_X(t)\,dt
+					=3\int_1^\infty t^{-2}\,dt
+					=\left.-3 t^{-1}\right|_1^\infty
+					=3.\]
+				Then $V(X)=E[X^2]-E[X]^2=3-\left(\frac{3}{2}\right)^2=\frac{12}{4}-\frac{9}{4}=\frac{3}{4}$.					
+
+## Some Discrete Distributions
+
+![List of discrete distributions.](discrete.jpg)
+
+## Binomial and Multinomial Distribution
+
+- Binomial: $X \sim \operatorname{Bin}(n, p)$
+$$
+P(X=x)=\binom{n}{x} p^{x}(1-p)^{n-x}=\frac{n !}{x !(n-x) !} p^{x}(1-p)^{n-x},
+$$
+  where $x=0,1, \ldots, n$. $E[x]=n p, \operatorname{Var}(X)=n p(1-p)$.
+
+- Multinomial:
+$$
+f\left(x_{1}, \ldots, x_{k}\right)=\frac{n !}{x_{1} ! x_{2} ! \ldots x_{k} !} p_{1}^{x_{1}} p_{2}^{x_{2}} \ldots p_{k}^{x_{k}}, \quad 0 \leq x_{j} \leq n 
+$$
+  where $n=\sum_{j=1}^{k} x_{j}$.
+
+## Geometric Distribution
+
+- A sequence of Bernoulli trials, each with success probability $p$.
+
+- Let the random variable $X \sim \operatorname{Geom}(p)$ record the number of failures until the first success is observed.
+
+- $P(X=x)=p(1-p)^{x}$ and $P(X \leq x)=1-(1-p)^{x+1}, x=0,1,2, \ldots$
+
+- $E(X)=\frac{1-p}{p}$
+
+- $\operatorname{Var}(X)=\frac{1-p}{p^{2}}$
+
+## Example 1
+
+- If $q=1-p$, at $x=0,1,2, \ldots$
+$$
+\begin{aligned}
+P(X \leq x) &=\sum_{k=0}^{x} p q^{k}=p\left(1+q+q^{2}+\cdots+q^{x}\right)\\
+&=\frac{p\left(1-q^{x+1}\right)}{1-q}=1-q^{x+1}
+\end{aligned}
+$$
+- Alternately, $P(X \leq x)=1-P(X \geq x+1)=1-P($ first $\mathrm{x}+1$ trials are failures $)=1-q^{x+1}$.
+
+## Negative Binomial Distribution
+
+Suppose that exactly $X \sim \operatorname{NegBin}(r, p)$ failures occur before the $r$-th success. In the first $x+r-1$ trials, there are $r-1$ successes and $x$ failures, which can happen in $\binom{x+r-1}{r-1}$ or $\binom{x+r-1}{x}$ ways.
+$$
+P(X=x)=\binom{x+r-1}{r-1} p^{r} q^{x}, \quad x=0,1,2, \ldots
+$$
+$r>0, 0<p<1$, and $q=1-p$,
+$$
+\mathrm{E}(X)=r \frac{1-p}{p}, \operatorname{Var}(X)=r \frac{1-p}{p^{2}}
+$$
+
+## Poisson Distribution
+
+A random variable $X$ has a Poisson distribution with parameter $\lambda>0$ if the pmf of $X$ is
+$$
+p(x)=\frac{e^{-\lambda} \lambda^{x}}{x !}, \quad x=0,1,2, \ldots
+$$
+If $X \sim \operatorname{Poisson}(\lambda)$, then
+$$
+\begin{gathered}
+E[X]=\lambda ; \quad \operatorname{Var}(X)=\lambda . \\
+E[X]=\sum_{x=0}^{\infty} x \frac{e^{-\lambda} \lambda^{x}}{x !}=\lambda \sum_{x=1}^{\infty} \frac{e^{-\lambda} \lambda^{x-1}}{(x-1) !}=\lambda \sum_{x=0}^{\infty} \frac{e^{-\lambda} \lambda^{x}}{x !}=\lambda.
+\end{gathered}
+$$
+The last equality follows because the summand is the Poisson pmf and the total probability must sum to 1 .
+
+## Some Continuous Distributions
+
+![List of some continuous distributions](continue.jpg)
+
+## Normal Distribution
+
+- Random variable: $\mathrm{X} \sim \mathrm{N}\left(\mu, \sigma^{2}\right)$,
+- pdf: $\mathrm{f}(\mathrm{x})=\frac{1}{\sigma \sqrt{2 \pi}} e^{-(x-\mu)^{2} / 2 \sigma^{2}},-\infty<\mathrm{X}<\infty$
+- $\mathrm{Z}=\frac{X-\mu}{\sigma} \sim \mathrm{N}(0,1)$
+- If $X_{1}, \ldots, X_{k}$ are independent, where $X_{i} \sim N\left(\mu_{i}, \sigma_{i}^{2}\right)$, then $Y=\sum_{i=1}^{k} a_{i} X_{i} \sim$ $\mathrm{N}\left(\sum_{i=1}^{k} a_{i} \mu_{i}, \sum_{i=1}^{k} a_{i}^{2} \sigma_{i}^{2}\right)$
+- If $X_{i}, i=1, \ldots, n$, are i.i.d $N\left(\mu, \sigma^{2}\right)$, then $\sum_{i} X_{i} \sim N\left(n \mu, n \sigma^{2}\right), \bar{X} \sim N(\mu$, $\left.\sigma^{2} / n\right)$
+- Central Limit Theorem: If $X$ 's are not normal, $n$ is large, $\bar{X}$ is approximately normal.
+
+## Gamma Distribution
+
+- Random variable: $X \sim \operatorname{Gamma}(r, \lambda)$
+- pdf
+$$
+f(x)=\frac{\lambda^{r}}{\Gamma(r)} x^{r-1} e^{-\lambda x}, \quad x \geq 0,
+$$
+where $\Gamma(r)$ is the complete gamma function, defined by
+$$
+\Gamma(r)=\int_{0}^{\infty} t^{r-1} e^{-t} d t, \quad r \neq 0,-1,-2, \ldots
+$$
+Recall that $\Gamma(n)=(n-1) !$ for positive integers $n$.
+- Mean and variance: $\mathrm{E}[\mathrm{X}]=\frac{r}{\lambda}, \operatorname{Var}(\mathrm{X})=\frac{r}{\lambda^{2}}$
+
+## Exponential Distribution
+
+- A special case of Gamma distribution is $r=1$.
+- Random variable: $X \sim \operatorname{Exp}(\lambda)$
+- pdf: $f(x)=\lambda e^{-\lambda x}, x \geqslant 0$
+- Mean and variance: $E[x]=\frac{1}{\lambda}, \operatorname{Var}(X)=\frac{1}{\lambda^{2}}$
+- If $X_{1}, \ldots, X_{r}$ are i.i.d. $\operatorname{Exp}(\lambda)$, then $Y=\sum_{i=1}^{r} X_{i} \sim \operatorname{Gamma}(r, \lambda)$
+
+## Example 2
+
+Two parameter exponential distribution $X \sim \operatorname{Exp}(\lambda, \eta)$
+$$
+f(x)=\lambda e^{-\lambda(x-\eta)}, \quad x \geq \eta,
+$$
+where $\lambda$ and $\boldsymbol{\eta}$ are positive.
+The cdf of the two-parameter exponential distribution is given by
+$$
+F(x)=\int_{\eta}^{x} \lambda e^{-\lambda(t-\eta)} d t=\int_{0}^{x-\eta} \lambda e^{-\lambda u} d u=1-e^{-\lambda(x-\eta)}, \quad x \geq \eta
+$$
+
+## Example 3
+
+If $X \sim \operatorname{Exp}(\lambda)$, for $s, t>0$, we have
+$$
+\begin{aligned}
+P(X>s+t \mid X>s) &=\frac{P(X>s+t)}{P(X>s)}=\frac{1-F(s+t)}{1-F(s)} \\
+&=\frac{e^{-\lambda(s+t)}}{e^{-\lambda s}}=e^{-\lambda t}=1-F(t) \\
+&=P(X>t) .
+\end{aligned}
+$$
+The first equality is simply the definition of conditional probability, $P(A \mid B)=$ $P(A B) / P(B)$.
+
+## Chi-square Distribution
+
+- Random variable: $X \sim \chi^{2}(v)$, i.e. Gamma $\left(r=\frac{v}{2}, \lambda=\frac{1}{2}\right)$
+- Pdf: $f(x)=\frac{1}{\Gamma\left(\frac{v}{2}\right) 2^{v / 2}} x^{(v / 2)-1} e^{-x / 2}, x \geqslant 0, v=1,2,3, \ldots$
+- $E[X]=v, \operatorname{Var}[X]=2 v$
+- If $Z_{1}, \ldots, Z_{v}$ are i. i. d. standard normal, then $\sum_{i} Z_{i}^{2} \sim \chi^{2}(v)$
+- If $X \sim \chi^{2}\left(v_{1}\right)$ and $Y \sim \chi^{2}\left(v_{2}\right)$ are independent, then $X+Y \sim \chi^{2}\left(v_{1}+v_{2}\right)$
+
+## t Distribution
+
+- Random variable: $\mathrm{T}=\frac{Z}{\sqrt{V / v}} \sim \mathrm{t}(v)$ if $\mathrm{Z} \sim \mathrm{N}(0,1)$ and $\mathrm{V} \sim \chi^{2}(v)$ be independent. $v$ is the degree freedom and $v=n-1$.
+- Pdf:
+$$
+f(x)=\frac{\Gamma\left(\frac{\nu+1}{2}\right)}{\Gamma\left(\frac{\nu}{2}\right)} \frac{1}{\sqrt{\nu \pi}} \frac{1}{\left(1+\frac{x^{2}}{\nu}\right)^{(\nu+1) / 2}}, \quad x \in \mathbb{R}, \nu=1,2, \ldots
+$$
+- Mean and Variance:
+$$
+E[X]=0, \quad \nu>1 ; \quad \operatorname{Var}(X)=\frac{\nu}{\nu-2}, \quad \nu>2
+$$
+- $v=1, \mathrm{t}(1)$ is standard Cauchy distribution
+- For small $v$ the $\mathrm{t}(v)$ has heavier tails than normal distribution, for large $v$ the $\mathrm{t}(v)$ is approximately normal.
+
+## Plot of t and normal distribution
+
+```{r, out.width="65%"}
+curve(dnorm(x),-3,3,ylim = c(0,0.6), ylab = "density of normal and t");
+x <- seq(-3,3,length=50)
+y <- dt(x,5)
+lines(x,y,lty="dashed")
+```
+
+
+## Beta Distribution
+
+- Random variable: $\mathrm{X} \sim \operatorname{Beta}(\alpha, \beta)$
+- Pdf:
+$$
+\begin{gathered}
+f(x)=\frac{\Gamma(\alpha+\beta)}{\Gamma(\alpha) \Gamma(\beta)} x^{\alpha-1}(1-x)^{\beta-1}, \quad 0 \leq x \leq 1, \alpha>0, \beta>0 . \\
+B(\alpha, \beta)=\int_{0}^{1} t^{\alpha-1}(1-t)^{\beta-1} d t=\frac{\Gamma(\alpha) \Gamma(\beta)}{\Gamma(\alpha+\beta)} .
+\end{gathered}
+$$
+- Mean and variance:
+$$
+E[X]=\frac{\alpha}{\alpha+\beta} ; \quad \operatorname{Var}(X)=\frac{\alpha \beta}{(\alpha+\beta)^{2}(\alpha+\beta+1)} .
+$$
+
+## Uniform Distribution
+
+- Random variable: $X \sim U(a,b)$
+
+- Pdf: $f(x)=\frac{1}{b-a}, x \in(a,b)$
+
+- Mean and variance: $E[X]=(a+b)/2, \operatorname{Var}(X)=(b-a)^2 / 12$
+
+- a special case $X \sim U(0,1)$ is equivalent to $\operatorname{Beta}(1,1)$
+
+## Lognormal Distribution
+
+- Random variable: $X \sim \log N\left(\mu, \sigma^{2}\right)$, if $X=e^{Y}$ then $Y \sim N\left(\mu, \sigma^{2}\right)$
+- pdf:
+$$
+f_{X}(x)=\frac{1}{x \sqrt{2 \pi} \sigma} e^{-(\log x-\mu)^{2} /\left(2 \sigma^{2}\right)}, \quad x>0 .
+$$
+- cdf:
+$$
+F_{X}(x)=\Phi\left(\frac{\log x-\mu}{\sigma}\right), \quad x>0
+$$
+- Moment:
+$$
+E\left[X^{r}\right]=E\left[e^{r Y}\right]=\exp \left\{r \mu+\frac{1}{2} r^{2} \sigma^{2}\right\}, \quad r>0
+$$
+- Mean and variance:
+$$
+E[X]=e^{\mu+\sigma^{2} / 2}, \quad \operatorname{Var}(X)=e^{2 \mu+\sigma^{2}}\left(e^{\sigma^{2}}-1\right)
+$$
+
+## The multivariate normal distribution
+
+- Random vector: $\boldsymbol{X}=\left(X_{1}, \ldots, X_{d}\right)^{\top} \sim N _{\mathrm{d}}(\boldsymbol{\mu}, \boldsymbol{\Sigma}), \boldsymbol{X} \in \mathbb{R}^{d}$
+- Joint pdf.
+$$
+f\left(x_{1}, \ldots, x_{d}\right)=\frac{1}{(2 \pi)^{d / 2}|\Sigma|^{1 / 2}} \exp \left\{-\frac{1}{2}(x-\mu)^{T} \Sigma^{-1}(x-\mu)\right\}
+$$
+- Linear transform: if $\boldsymbol{C}$ is an $m \times d$ matrix and $\boldsymbol{b}=\left(b_{1}, \ldots, b_{m}\right)^{T} \in \mathbb{R}^{m}$, then 
+$\boldsymbol{Y}=C X+b \sim N_{\mathrm{m}}\left(C \mu + b, C \Sigma C^{T}\right)$
+
+## Limit Theorems: Laws of Large Numbers
+
+- Weak Law of Large Numbers: the sample mean converges in probability to the population mean. Suppose $X_{1}, \ldots, X_{n}$ are i.i.d. and let $\overline{X_{\mathrm{n}}}=\frac{1}{n} \sum_{i=1}^{n} X_{i}$ and $\epsilon>0$
+$$
+\lim _{n \rightarrow \infty} P\left(\left|\bar{X}_{n}-\mu\right|<\epsilon\right)=1 .
+$$
+- Strong Law of Large Numbers: the sample mean converges almost surely to the population mean. Suppose $X_{1}, \ldots, X_{n}$ are pairwise i.i.d. and let $\overline{X_{\mathrm{n}}}=\frac{1}{n} \sum_{i=1}^{n} X_{i}$ and $\epsilon>0$
+$$
+P\left(\lim _{n \rightarrow \infty}\left|\bar{X}_{n}-\mu\right|<\epsilon\right)=1
+$$
+
+## Limit Theorems: Central Limit Theorem
+
+If $X_{1}, \ldots, X_{n}$ is a random sample from a distribution with mean $\mu$ and finite variance $\sigma^{2}>0$, then the limiting distribution of
+$$
+Z_{n}=\frac{\bar{X}-\mu}{\sigma / \sqrt{n}}
+$$
+is the standard normal distribution
+
+## The empirical distribution function
+
+$$
+F_{n}(x)= \begin{cases}0, & x<x_{(1)} \\ \frac{i}{n}, & x_{(i)} \leq x<x_{(i+1)}, i=1, \ldots, n-1 \\ 1, & x_{(n)} \leq x\end{cases}
+$$
+where $x_{(1)} \leq x_{(2)} \leq \cdots \leq x_{(n)}$ is the ordered sample.
+
+## Bias
+
+A statistic $\hat{\theta}_{n}$ is an unbiased estimator of a parameter $\theta$ if $E\left[\hat{\theta}_{n}\right]=\theta .$ An estimator $\hat{\theta}_{n}$ is asymptotically unbiased for $\theta$ if
+$$
+\lim _{n \rightarrow \infty} E\left[\hat{\theta}_{n}\right]=\theta.
+$$
+The bias of an estimator $\hat{\theta}$ for a parameter $\theta$ is defined $\operatorname{bias}(\hat{\theta})=E[\hat{\theta}]-\theta$.
+Clearly $\bar{X}$ is an unbiased estimator of the mean $\mu=E[X] .$ It can be shown that $E\left[S^{2}\right]=\sigma^{2}=\operatorname{Var}(X)$, so the sample variance $S^{2}$ is an unbiased estimator of $\sigma^{2}$. The maximum likelihood estimator of variance is
+$$
+\hat{\sigma}^{2}=\frac{1}{n} \sum_{i=1}^{n}\left(X_{i}-\bar{X}\right)^{2}
+$$
+which is a biased estimator of $\sigma^{2}$.
+
+## Mean Squared Error
+
+The mean squared error (MSE) of an estimator $\hat{\theta}$ for parameter $\theta$ is
+$$
+M S E(\hat{\theta})=E\left[(\hat{\theta}-\theta)^{2}\right] .
+$$
+Notice that for an unbiased estimator the MSE is the equal to the variance of the estimator. If $\hat{\theta}$ is biased for $\theta$, however, the MSE is larger than the variance. In fact, the MSE can be split into two parts,
+$$
+\begin{aligned}
+\operatorname{MSE}(\hat{\theta}) &=E\left[\hat{\theta}^{2}-2 \theta \hat{\theta}+\theta^{2}\right]=E\left[\hat{\theta}^{2}\right]-2 \theta E[\hat{\theta}]+\theta^{2} \\
+&=E\left[\hat{\theta}^{2}\right]-(E[\hat{\theta}])^{2}+(E[\hat{\theta}])^{2}-2 \theta E[\hat{\theta}]+\theta^{2} \\
+&=\operatorname{Var}(\hat{\theta})+(E[\hat{\theta}]-\theta)^{2}
+\end{aligned}
+$$
+so the MSE is the sum of variance and squared bias:
+$$
+\operatorname{MSE}(\hat{\theta})=\operatorname{Var}(\hat{\theta})+[\operatorname{bias}(\hat{\theta})]^{2} .
+$$
+
+## Method of Moments
+
+The $r^{t h}$ sample moment $m_{r}^{\prime}=\frac{1}{n} \sum_{i=1}^{n} X_{i}^{r}, r=1,2, \ldots$ is an unbiased estimator of the $r^{t h}$ population moment $E\left[X^{r}\right]$, provided that the $r^{t h}$ moment exists. If $X$ has density $f\left(x ; \theta_{1}, \ldots, \theta_{k}\right)$, then the method of moments estimator of $\theta=\left(\theta_{1}, \ldots, \theta_{k}\right)$ is given by the simultaneous solution $\hat{\theta}=\left(\hat{\theta}_{1}, \ldots, \hat{\theta}_{k}\right)$ of the equations
+$$
+E\left[X^{r}\right]=m_{r}^{\prime}\left(x_{1}, \ldots, x_{n}\right)=\frac{1}{n} \sum_{i=1}^{n} x_{i}^{r}, \quad r=1, \ldots, k .
+$$
+
+## The Likelihood Functions
+
+Suppose that $x$ the sample observations are iid from a distribution with density function $f(X \mid \theta)$, where $\theta$ is a parameter. The likelihood function is the conditional probability of observing the sample, given $\theta$, which is given by
+$$
+L(\theta)=\prod_{i=1}^{n} f\left(x_{i} \mid \theta\right)
+$$
+The parameter $\theta$ could be a vector of parameters, $\theta=\left(\theta_{1}, \ldots, \theta_{p}\right)$. The likelihood function regards the data as a function of the parameter(s) $\theta$. As $L(\theta)$ is a product, it is usually easier to work with the logarithm of $L(\theta)$, called the log likelihood function,
+$$
+l(\theta)=\log (L(\theta))=\sum_{i=1}^{n} \log f\left(x_{i} \mid \theta\right)
+$$
+
+## Maximum Likelihood (ML) Estimation
+
+The method of maximum likelihood was introduced by R. A. Fisher. By maximizing the likelihood function $L(\theta)$ with respect to $\theta$, we are looking for the most likely value of $\theta$ given the information available, namely the sample data. Suppose that $\Theta$ is the parameter space of possible values of $\theta$. If the maximum of $L(\theta)$ exists and it occurs at a unique point $\hat{\theta} \in \Theta$, then $\hat{\theta}$ is called the maximum likelihood estimator (MLE) of $L(\theta)$. If the maximum exists but is not unique, then any of the points where the maximum is attained is an MLE of $\theta$. For many problems, the MLE can be determined analytically. However, it is often the case that the optimization cannot be solved analytically, and in that case numerical optimization or other computational approaches can be applied.
+
+## Example 4
+
+Suppose that $x$ is random sample from the $\operatorname{Exp}(\lambda, \eta)$ distribution. Find the $\mathrm{ML}$ estimator of $\theta=(\lambda, \eta)$. If $\mathrm{x}_{(1)}=\min \left\{\mathrm{x}_{1}, \ldots, \mathrm{x}_{n}\right\}$, the likelihood function is
+$$
+L(\theta)=L(\lambda, \eta)=\lambda^{n} \exp \left\{-\lambda \sum_{i=1}^{n}\left(x_{i}-\eta\right)\right\}, \quad x_{(1)} \geq \eta,
+$$
+and the log-likelihood is given by
+$$
+l(\theta)=l(\lambda, \eta)=n \log \lambda-\lambda \sum_{i=1}^{n}\left(x_{i}-\eta\right), \quad x_{(1)} \geq \eta \text {. }
+$$
+Then $l(\theta)$ is an increasing function of $\eta$ for every fixed $\lambda$, and $\eta \leq x_{(1)}$, so $\hat{\eta}=x_{(1)}.$ 
+
+## Example 4
+
+To find the maximum of $l(\theta)$ with respect to $\lambda$, solve
+$$
+\frac{\partial l(\lambda, \eta)}{\partial \lambda}=\frac{n}{\lambda}-\sum_{i=1}^{n}\left(x_{i}-\eta\right)=0
+$$
+to find the critical point $\lambda=1 /(\bar{x}-\eta)$. The $\operatorname{MLE}$ of $\theta=(\lambda, \eta)$ is
+$$
+(\hat{\lambda}, \hat{\eta})=\left(\frac{1}{\bar{x}-x_{(1)}}, x_{(1)}\right).
+$$
+
+## Example 5
+
+- Find the maximum likelihood (ML) estimator of the $\alpha$-quantile of the $\operatorname{Exp}(\lambda, \eta)$ distribution. We have
+$$
+F(x)=1-e^{-\lambda(x-\eta)}, \quad x \geq \eta.
+$$
+Therefore $F\left(x_{\alpha}\right)=\alpha$ implies that
+$$
+x_{\alpha}=-\frac{1}{\lambda} \log (1-\alpha)+\eta,
+$$
+and by the invariance property of maximum likelihood, the MLE of $x_{\alpha}$ is
+$$
+\hat{x}_{\alpha}=-\left(\bar{x}-x_{(1)}\right) \log (1-\alpha)+x_{(1)}.
+$$
+

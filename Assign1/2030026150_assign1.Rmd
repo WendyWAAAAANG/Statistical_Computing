@@ -1,0 +1,169 @@
+---
+title: "Homework Assignment 1"
+author: "Ruoxin WANG(2030026150)"
+date: "__Due on March 15, 2023 at 11:59 pm__"
+output: pdf_document
+---
+
+
+```{r setup, include=TRUE}
+library(knitr)
+# set global chunk options: images will be 7x5 inches
+knitr::opts_chunk$set(fig.width=7, fig.height=5)
+options(digits = 4)
+
+
+## indents are for indenting r code as formatted text
+## They may need to be adjusted depending on your OS
+# if your output looks odd, increase or decrease indent
+indent1 = '    '
+indent2 = '        '
+indent3 = '            '
+#library(tidyverse)
+#library(reshape2)
+```
+
+### Instructions: You need to fully show your explanations, codes, and results to get full credit. You will need to submit your R markdown file and the generated pdf file. Missing the R markdown file, you will get a 10% penalty. Missing pdf file, you will have no grades (Your TA will not knit pdf for you). Late submission will not be accepted.
+
+1. a) Generate a random sample $X_1, ., X_{100}$ which is from a normal distribution with mean $\mu = 5$ and standard deviation $\sigma = 3$. Use set.seed(99) before random number generation.
+
+```{r}
+set.seed(99)
+x = rnorm(100, 5, 3)
+print(x)
+```
+    
+    b) Write an R function 'fx' in R to implement the function $y=(x-a)/b$, which will transform an input vector $x$ and return the output $y$. However, the function should take three input arguments $x, a$ and $b$.
+
+```{r}
+fx <- function(x, a, b){
+  y <- (x-a)/b
+  return(y)
+}
+```    
+        
+    c) Generate the random sample $y$ using the function in b), where $x$ = the random sample generated in a), a=5 and b=3. What is the distribution of $y$? And explain. Then calculate the sample mean and standard deviation of $y$ and compare them with the population mean and standard deviation. Note, please show your derivation of the population mean and standard deviation. 
+
+```{r}
+a = 5
+b = 3
+y <- fx(x, a, b)
+# calculate sample mean and standard deviation of y.
+y_mean_s <- mean(y)
+y_sd_s <- sqrt(var(y))
+print('sample mean of y: ')
+print(y_mean_s)
+print('sample standard deviation of y: ')
+print(y_sd_s)
+# calculate population mean and standard deviation of y.
+y_mean_p = (mean(x)-a) / b
+y_sd_p = sd(x) / b
+print('popylation mean of y: ')
+print(y_mean_p)
+print('population standard deviation of y: ')
+print(y_sd_p)
+# difference between simple and population mean and standard derivation.
+diff_mean = y_mean_s - y_mean_p
+diff_sd = y_sd_s - y_sd_p
+print('difference between sample and population mean:')
+print(diff_mean)
+print('difference between sample and population standard derivation:')
+print(diff_sd)
+```
+
+    d) Display a probability histogram of the random sample $y$ and add an estimated probability density function to your histogram 
+
+```{r}
+h <- hist(y)
+lines(density(y), col = 'blue')
+plot(h)
+```
+
+    e) Add the true probability density function to your histogram in d)
+
+```{r}
+h <- hist(y)
+lines(density(y), col = 'blue')
+curve(dnorm(x, mean = 0, sd = 1), add = TRUE, from = -4, to = 4, col = 'red')
+legend('topleft', legend = c('Estimated Density', 'True Density'), col = c('blue', 'red'), lwd = 2)
+plot(h)
+```
+
+2. We will use the dataset called `hflights`. This dataset contains all flights departing from Houston airports IAH (George Bush Intercontinental) and HOU (Houston Hobby). 
+The data comes from the Research and Innovation Technology Administration at the Bureau of Transportation statistics: [hflights](http://www.transtats.bts.gov/DatabaseInfo.asp?DB_ID=120&Link=0). Make sure you have installed the packages `hflights` before suing them.
+
+```{r rdata, eval=TRUE}
+# Load packages
+# install.packages("hflights")
+library(hflights)
+data(hflights)
+```
+    
+(a) How many rows and columns of `hflights`? Get the names of the columns.
+ 
+```{r}
+# number of rows and columns of 'hflights'.
+print('number of rows and columns:')
+dim(hflights)
+# we have 227496 rows and 21 columns.
+# get the names of the columns.
+print('name of columns:')
+names(hflights)
+```
+
+(b) Select the first 15 rows make it a data frame called `phflights`. Suppose we would like check three variables, DepTime, ArrTime and FlightNum. Select these three columns and call it `sflights`. Only Show the first few lines of `sflights`.
+
+```{r}
+attach(hflights)
+phflights <- data.frame(hflights[1:15, ])
+sflights <- data.frame(hflights[c('DepTime', 'ArrTime', 'FlightNum')])
+head(sflights)
+```
+
+(c) Create a new column vector Called `BNum` indicating if the FlightNum is greater than 1000 and append this column to `sflights`. Show the first few lines.
+
+```{r}
+sflights$BNum <- c(hflights$FlightNum > 1000)
+head(sflights)
+```
+
+(d) Compute the average arrival delay (ArrDelay) to each destination for `hflights`. (Hint: use na.rm = TRUE to remove missing values) Only show the first 10 results. Then for each carrier, calculate the percentage of flights cancelled or diverted.
+
+```{r}
+# compute the average arrival delay to each destination.
+avg_delay <- aggregate(hflights$ArrDelay, by = list(hflights$Dest), mean, na.rm = TRUE)
+colnames(avg_delay) <- c('Destination', 'AvgArrDelay')
+head(avg_delay, 10)
+
+# for each carrier, calculate the percentage of flights cancelled / diverted.
+carrier <- aggregate((hflights$Cancelled + hflights$Diverted), by = list(hflights$UniqueCarrier), FUN = mean, na.rm = TRUE)
+colnames(carrier) <- c("UniqueCarrier", "cancelled_or_diverted")
+carrier$cancelled_or_diverted <- carrier$cancelled_or_diverted * 100
+print(carrier)
+
+
+#install.package('tidyverse')
+#library(tidyverse)
+#carrier_cancelled_diverted <- hflights %>%
+#group_by(UniqueCarrier) %>%
+#summarize(cancelled_diverted = mean(Cancelled + Diverted, na.rm = TRUE)) %>%
+#mutate(cancelled_diverted = cancelled_diverted * 100)
+
+#carrier_cancelled_diverted
+```
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    

@@ -1,0 +1,160 @@
+---
+title: "Homework Assignment 1"
+author: "DS4043, Spring 2022"
+date: "__Due on Feb 27, 2022 at 11:59 pm__"
+output: pdf_document
+---
+
+
+```{r setup, include=FALSE}
+library(knitr)
+# set global chunk options: images will be 7x5 inches
+knitr::opts_chunk$set(fig.width=7, fig.height=5)
+options(digits = 4)
+
+
+## indents are for indenting r code as formatted text
+## They may need to be adjusted depending on your OS
+# if your output looks odd, increase or decrease indent
+indent1 = '    '
+indent2 = '        '
+indent3 = '            '
+#library(tidyverse)
+#library(reshape2)
+```
+
+
+1. a) Generate a random sample $X_1, ., X_{100}$ which is from a normal distribution with mean $\mu = 5$ and standard deviation $\sigma = 3$. Use set.seed(99) for random number generation.
+
+        <!-- solution begin -->
+        __Solution__:
+```{r indent=indent2}
+set.seed(99)
+x <- rnorm(100,5,3)
+x
+```
+        <!-- solution end -->
+        
+    b) Write a R function 'fx' in R to implement the function $y=(x-a)/b$, which will transform an input vector $x$ and return the output $y$. However, the function should take three input arguments $x, a$ and $b$.
+
+        <!-- solution begin -->
+        __Solution__:
+```{r indent=indent2}
+fx <- function(x,a,b){
+  y <- (x-a)/b
+  return(y)
+}
+```
+        <!-- solution end -->
+        
+    c) Generate the random sample $y$ using the function in b), where $x$=the random sample generated in a), a=5 and b=3. What is the distribution of $y$? And explain. Then calculate the sample mean and standard deviation of $y$ and compare them with the population mean and standard deviation. Note, please show your derivation of the population mean and standard deviation. 
+
+        <!-- solution begin -->
+        __Solution__:
+```{r indent=indent2}
+y<- fx(x,a=5,b=3);
+mean(y);
+sd(y)
+```
+We know that $y = (x-a)/b$ and $x$ is following a normal distribution. Then $y$ is following normal distribution because $y$ is a linear combination of $x$. $E(y) = (E(x) - a)/b = (5-5)/3=0$ and $Var(y) = Var(x)/b^2 = 1$. So the sample mean and standard deviation of $y$ is -0.104 and 0.9007. 
+        <!-- solution end -->
+        
+    d) Display a probability histogram of the random sample $y$ and add an estimated probability density function to your histogram 
+    
+
+        <!-- solution begin -->
+        __Solution__:
+```{r indent=indent2}
+hist(y, freq=FALSE, main="Density histogram of y")
+lines(density(y))
+```
+        <!-- solution end -->
+
+    e) Add the true probability density function to your histogram in d)
+    
+        <!-- solution begin -->
+        __Solution__:
+```{r indent=indent2, cache=TRUE}
+xfit<-seq(min(y),max(y),length=40)
+yfit<-dnorm(xfit,0,sd=1)
+hist(y, freq=FALSE, main="Density histogram of y")
+lines(density(y))
+lines(xfit, yfit, col="blue", lwd=2)
+```
+        <!-- solution end -->
+
+
+
+2. We will use the dataset called `hflights`. This dataset contains all flights departing from Houston airports IAH (George Bush Intercontinental) and HOU (Houston Hobby). 
+The data comes from the Research and Innovation Technology Administration at the Bureau of Transportation statistics: [hflights](http://www.transtats.bts.gov/DatabaseInfo.asp?DB_ID=120&Link=0). Make sure you have installed the packages `hflights` before using them.
+
+```{r start, indent=indent1}
+# Load packages
+# install.packages("hflights")
+library(hflights)
+data(hflights)
+```
+    
+    (a) How many rows and columns of `hflights`? Get the names of the columns. (show your codes and results)
+    
+        <!-- solution begin -->
+        __Solution__:
+```{r indent=indent2}
+nrow(hflights);
+ncol(hflights);
+names(hflights)
+```
+        <!-- solution end --> 
+        
+    (b) Select the first 15 rows make it a data frame called `phflights`. Suppose we would like check three variables, DepTime, ArrTime and FlightNum. Select these three columns and call it `sflights`. Show the first few lines of `sflights`.
+    
+        <!-- solution begin -->
+        __Solution__:
+```{r indent=indent2}
+phflights <- hflights[1:15,];
+phflights
+sflights <- hflights[, c("DepTime", "ArrTime", "FlightNum")]
+head(sflights)
+```
+        <!-- solution end --> 
+    
+    (c) Create a new column vector Called `BNum` indicating if the FlightNum is greater than 1000 and append this column to `sflights`. Show the first few lines.
+    
+        <!-- solution begin -->
+        __Solution__:
+```{r indent=indent2}
+BNum <- hflights$FlightNum > 1000
+sflights <- data.frame(sflights, BNum)
+head(sflights)
+```
+        <!-- solution end -->
+        
+    (d) Compute the average arrival delay (ArrDelay) to each destination for `hflights`. (Hint: use na.rm = TRUE to remove missing values) Show the first few results. Then for each carrier, calculate the percentage of flights cancelled or diverted.
+    
+        <!-- solution begin -->
+        __Solution__:
+```{r indent=indent2}
+head(by(hflights$ArrDelay, hflights$Dest, mean, na.rm = TRUE));
+by(hflights$Cancelled+hflights$Diverted,hflights$UniqueCarrier , mean, na.rm = TRUE)
+```
+        <!-- solution end -->     
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    

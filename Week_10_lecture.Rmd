@@ -1,0 +1,531 @@
+---
+title: 'DS4043: Introduction to Statistical Computing'
+author: "Dr. Zhijian Li"
+#date: "`r Sys.Date()`"
+output:
+  beamer_presentation: default
+  latex_engine: xelatex
+  html_document: default
+  html_notebook:
+    colortheme: default
+  ioslides_presentation:
+    widescreen: true
+    colortheme: default
+    css: ../custom.css
+    fontfamily: mathpazo
+    wide: yes
+  slidy_presentation: default
+---
+
+
+## Bootstrap and Jackknife
+
+- Bootstrap
+- Bootstrap Confidence Intervals
+- Jackknife
+
+
+## The Bootstrap - introduction
+
+- Bootstrap methods are a class of nonparametric Monte Carlo methods that estimate the distribution of a population by resampling. Resampling methods treat an observed sample as a finite population, and random samples are generated (resampled) from it to estimate population characteristics and make inferences about the sampled population.
+- Bootstrap methods are often used when the distribution of the target population is not specified; the sample is the only information available.
+- The distribution of the finite population represented by the sample can be regarded as a pseudo-population.
+- By repeatedly generating random samples from this pseudo-population (resampling), the sampling distribution of a statistic can be estimated. 
+- The bootstrap is applied to estimate the standard error and the bias of an estimator in the following sections.
+
+## The Bootstrap - Method
+
+- Suppose $\boldsymbol{\theta}$ is the parameter of interest and $\hat{\boldsymbol{\theta}}$ is an estimator of $\boldsymbol{\theta}$. For each bootstrap replicate, indexed $b=1, \ldots, B$.
+- Generate a sample $x^{*(b)}=x_{1}^{*}, \ldots, x_{n}^{*}$, by sampling with replacement from the observed sample $x_{1}, \ldots, x_{n}$.
+- Compute the $b^{th}$ replicate $\widehat{\boldsymbol{\theta}}^{(b)}$ from $b^{th}$ bootstrap sample.
+- The bootstrap estimate of $F_{\hat{\theta}}(\cdot)$ is the empirical distribution of the replicates $\hat{\theta}^{(1)}, \ldots, \hat{\theta}^{(B)}$.
+
+## Bootstrap Estimation of Standard Error
+
+- The bootstrap estimate of standard error of an estimator $\hat{\theta}$ is the sample standard deviation of the bootstrap replicates $\hat{\theta}^{(1)}, \ldots, \hat{\theta}^{(B)}$.
+$$
+\widehat{s e}\left(\hat{\theta}^{*}\right)=\sqrt{\frac{1}{B-1} \sum_{b=1}^{B}\left(\hat{\theta}^{(b)}-\overline{\hat{\theta}^{*}}\right)^{2}}
+$$
+where $\overline{\hat{\theta}^{*}}=\frac{1}{B} \sum_{b=1}^{B} \hat{\theta}^{(b)}$.
+- According to Efron and Tibshirani, the number of replicates needed for good estimates of standard error is not large; $B = 50$ is usually large enough, and rarely is $B > 200$ necessary. (Much larger B will be needed for confidence interval estimation.)
+
+
+## Example (Bootstrap estimate of standard error)
+
+The law school data set _law_ in the _bootstrap_ package is from Efron and Tibshirani. The data frame contains LSAT (average score on law school
+admission test score) and GPA (average undergraduate grade-point average) for 15 law schools.
+```{r}
+# install.packages("bootstrap")
+library(bootstrap)
+law
+```
+
+
+## Example (Bootstrap estimate of standard error)
+
+This data set is a random sample from the universe of 82 law schools in _law82_. Estimate the correlation between LSAT and GPA scores, and
+compute the bootstrap estimate of the standard error of the sample correlation. 
+
+```{r}
+print(cor(law$LSAT, law$GPA))
+```
+
+```{r}
+print(cor(law82$LSAT, law82$GPA))
+```
+The sample correlation is $R = 0.7763745$. The correlation for the universe of 82 law schools is $R = 0.7599979$.
+
+## Example (Bootstrap estimate of standard error)
+
+Use bootstrap to estimate the standard error of the correlation statistic computed from the sample of scores in _law_.
+
+```{r}
+#set up the bootstrap
+B <- 200 #number of replicates
+n <- nrow(law) #sample size
+R <- numeric(B) #storage for replicates
+#bootstrap estimate of standard error of R
+for (b in 1:B) {
+#randomly select the indices
+i <- sample(1:n, size = n, replace = TRUE)
+LSAT <- law$LSAT[i] #i is a vector of indices
+GPA <- law$GPA[i]
+R[b] <- cor(LSAT, GPA)
+}
+```
+
+## Example (Bootstrap estimate of standard error)
+
+```{r out.width="50%"}
+#output
+print(se.R <- sd(R))
+hist(R, prob = TRUE)
+```
+
+## Bootstrap estimate of bias
+
+- If $\hat{\theta}$ is an unbiased estimator of $\theta, E[\hat{\theta}]=\theta$. The bias of an estimator $\hat{\theta}$ for $\theta$ is
+$$
+\operatorname{bias}(\hat{\theta})=E[\hat{\theta}-\theta]=E[\hat{\theta}]-\theta .
+$$
+- The bootstrap estimation of bias uses the bootstrap replicates of $\hat{\theta}$ to estimate the sampling distribution of $\hat{\theta}$. 
+- The bootstrap estimate of bias is
+$$
+\widehat{\operatorname{bias}}(\hat{\theta})=\overline{\hat{\theta}^{*}}-\hat{\theta},
+$$
+where $\overline{\hat{\theta}^{*}}=\frac{1}{B} \sum_{b=1}^{B} \hat{\theta}^{(b)}$, and $\hat{\theta}=\hat{\theta}(x)$ is the estimate computed from the original observed sample.
+
+## Example (Bootstrap estimate of bias)
+
+```{r}
+#sample estimate for n=15
+theta.hat <- cor(law$LSAT, law$GPA) 
+#bootstrap estimate of bias
+B <- 2000 #larger for estimating bias 
+n <- nrow(law)
+theta.b <- numeric(B)
+for (b in 1:B) {
+i <- sample(1:n, size = n, replace = TRUE) 
+LSAT <- law$LSAT[i]
+GPA <- law$GPA[i]
+theta.b[b] <- cor(LSAT, GPA)
+}
+bias <- mean(theta.b - theta.hat)
+bias
+```
+
+
+## Bootstrap estimate: boot function
+
+- In the next example, the _boot_ function in recommended package _**boot**_ is applied to run the bootstrap. 
+- The basic syntax for ordinary bootstrap is
+
+    _boot(data, statistic, R)_
+    
+    where data is the observed sample and R is the number of bootstrap replicates. The second argument _(statistic)_ is a function, or the name of a function, which calculates the statistic to be replicated. 
+
+## Example (boot function)
+
+```{r}
+# install.packages("boot")
+f <- function(x, i) {
+#want correlation of columns 1 and 2
+cor(x[i,1], x[i,2])
+}
+library(boot) #for boot function
+obj <- boot(data = law, statistic = f, R = 2000)
+sd(obj$t) # $t will call the replicates of the statistic
+mean(obj$t - obj$t0) # $t0 will call the statistic
+```
+
+## Example (boot function)
+
+```{r}
+obj
+```
+
+
+## Example (Bootstrap estimate of bias of a ratio estimate)
+
+The _patch (bootstrap)_ data from Efron and Tibshirani contains measurements of a certain hormone in the bloodstream of eight subjects after wearing a medical patch. The parameter of interest is
+$$
+\boldsymbol{\theta}=\frac{E(\text { new })-E(\text { old })}{E(\text { old })-E(\text { placebo })}
+$$
+If $|\boldsymbol{\theta}| \leq 0.2$, indicates bioequivalence of the old and new patches. The statistic is $\bar{Y} / \bar{Z}$. Compute a bootstrap estimate of bias in the bioequivalence ratio statistic.
+
+## Example (Bootstrap estimate of bias of a ratio estimate)
+
+```{r}
+data(patch, package = "bootstrap") 
+patch
+```
+
+## Example (Bootstrap estimate of bias of a ratio estimate)
+
+```{r}
+n <- nrow(patch) #in bootstrap package
+B <- 2000
+theta.b <- numeric(B)
+theta.hat <- mean(patch$y) / mean(patch$z)
+# bootstrap method
+for (b in 1:B) {
+i <- sample(1:n, size = n, replace = TRUE) 
+y <- patch$y[i]
+z <- patch$z[i]
+theta.b[b] <- mean(y) / mean(z)
+}
+bias <- mean(theta.b) - theta.hat 
+se <- sd(theta.b) 
+```
+
+## Example (Bootstrap estimate of bias of a ratio estimate)
+
+```{r}
+print(list(est=theta.hat, bias = bias,
+se = se, cv = bias/se))
+```
+If $|bias|/se \leq 0.25$, it is not usually necessary to adjust for bias. The bias is small relative to standard error, so in this example it is not necessary to adjust for bias.
+
+## Example (Bootstrap estimate of bias of a ratio estimate)
+
+```{r}
+f <- function(x, i){mean(x[i,1]) / mean(x[i,2]) }
+r.patch = patch[,c(6,5)]
+obj <- boot(data = r.patch, statistic = f, R = 2000)
+obj
+```
+
+## The Standard Normal Bootstrap Confidence Interval
+
+Suppose that $\hat{\theta}$ is an estimator of parameter $\theta$, and assume the standard error of the estimator is $\operatorname{se}(\hat{\theta})$. If the sample size is large, then the Central Limit Theorem implies that
+$$
+Z=\frac{\hat{\theta}-E[\hat{\theta}]}{s e(\hat{\theta})} \sim N(0,1)
+$$
+If $\hat{\theta}$ is unbiased for $\theta$, then an approximate $100(1-\alpha) \%$ confidence interval for $\theta$ is the $Z$-interval
+$$
+\hat{\theta} \pm z_{\alpha / 2} \operatorname{se}(\hat{\theta}).
+$$
+To apply the normal distribution, we assume that the distribution of $\hat{\theta}$ is normal or $\hat{\theta}$ is a sample mean and the sample size is large. We have also implicitly assumed that $\hat{\theta}$ is unbiased for $\theta$.
+
+## The Basic/Percentile Bootstrap Confidence Interval
+
+The $100(1-\alpha) \%$ basic bootstrap confidence interval for $\boldsymbol{\theta}$ is
+$$
+\left(2 \widehat{\boldsymbol{\theta}}-\widehat{\boldsymbol{\theta}}_{1-\alpha / 2}^{*}, 2 \widehat{\boldsymbol{\theta}}-\widehat{\boldsymbol{\theta}}_{\alpha / 2}^{*}\right)
+$$
+where $\hat{\theta}_{\alpha}^{*}$ denotes the $\alpha$ sample quantile of the bootstrap replicates $\hat{\theta}^{*}$.
+The $100(1-\alpha) \%$ percentile bootstrap confidence interval for $\boldsymbol{\theta}$ is
+$$
+\left(\widehat{\boldsymbol{\theta}}_{\alpha / 2}^{*}, \widehat{\boldsymbol{\theta}}_{1-\alpha / 2}^{*} \right)
+$$
+
+## The better bootstrap (BCa) confidence interval
+
+The $100(1-\alpha) \%$ better bootstrap (BCa) confidence interval for $\boldsymbol{\theta}$ is
+$$
+\begin{gathered}
+\left(\widehat{\boldsymbol{\theta}_{\alpha_{1}}^{*}}, \widehat{\left.\boldsymbol{\theta}_{\alpha_{2}}^{*}\right)}\right. \\
+\alpha_{1}=\Phi\left(\widehat{z_{0}}+\frac{\widehat{z_{0}}+z_{\alpha / 2}}{1-\hat{a}\left(\widehat{z_{0}}+z_{\alpha / 2}\right)}\right) \\
+\alpha_{2}=\Phi\left(\widehat{z_{0}}+\frac{\widehat{z_{0}}+z_{1-\alpha / 2}}{1-\hat{a}\left(\widehat{z_{0}}+z_{1-\alpha / 2}\right)}\right),
+\end{gathered}
+$$
+
+## The better bootstrap (BCa) confidence interval
+
+$$\widehat{z_{0}}=\Phi^{-1}\left(\frac{1}{B} \sum_{b=1}^{B} I\left(\widehat{\boldsymbol{\theta}}^{(b)}<\widehat{\boldsymbol{\theta}}\right)\right)$$
+$$\hat{a}=\frac{\sum_{i=1}^{n}\left(\boldsymbol{\theta}_{(i)}-\overline{\boldsymbol{\theta}_{(.)}}\right)^{3}}{6\left(\sum_{i=1}^{n}\left(\boldsymbol{\theta}_{(i)}-\overline{\boldsymbol{\theta}_{(.)}}\right)^{2}\right)^{3 / 2}} .$$
+
+## The Bootstrap Confidence Interval
+
+- The _boot.ci (boot)_ function computes five types of bootstrap confidence intervals: basic, normal, percentile, studentized, and BCa. 
+- To use this function, first call _boot_ for the bootstrap, and pass the returned boot object to _boot.ci_ (along with other required arguments). 
+- For more details see the _boot.ci_ help topic.
+
+## Example (Bootstrap confidence intervals for the correlation statistic)
+
+Compute 95% bootstrap confidence interval estimates for the correlation statistic in the law data
+```{r}
+library(boot)
+data(law, package = "bootstrap")
+boot.obj <- boot(law, R = 2000,
+statistic = function(x, i){cor(x[i,1], x[i,2])}) 
+```
+
+## Example (Bootstrap confidence intervals for the correlation statistic)
+
+```{r}
+print(boot.ci(boot.obj, type=c("basic","norm","perc")))
+```
+
+## The Bootstrap t interval
+
+- Even if the distribution of $\hat{\theta}$ is normal and $\hat{\theta}$ is unbiased for $\theta$, the normal distribution is not exactly correct for the $Z$ statistic, because we estimate $\operatorname{se}(\hat{\theta})$. 
+- Nor can we claim that it is a Student $t$ statistic, because the distribution of the bootstrap estimator $\widehat{s e}(\hat{\theta})$ is unknown. 
+- The bootstrap $t$ interval does not use a Student $t$ distribution as the reference distribution. Instead, the sampling distribution of a "t type" statistic is generated by resampling. 
+- The $100(1-\alpha) \%$ bootstrap $t$ confidence interval is
+$$
+\left( \hat{\theta}+t_{\alpha / 2}^{*} \widehat{s e}(\hat{\theta}), \quad \hat{\theta} - t_{\alpha / 2}^{*} \widehat{s e}(\hat{\theta}) \right)
+$$
+
+## The Bootstrap t interval
+
+1. Compute the observed statistic $\hat{\theta}$.
+2. For each replicate, indexed $b=1, \ldots, B$ :
+    (a) Sample with replacement from $x$ to get the $b^{t h}$ sample $x^{(b)}=\left(x_{1}^{(b)}, \ldots, x_{n}^{(b)}\right)$
+    (b) Compute $\hat{\theta}^{(b)}$ from the $b^{t h}$ sample $x^{(b)}$.
+    (c) Compute or estimate the standard error $\widehat{se}\left(\hat{\theta}^{(b)}\right).$ (a separate estimate for each bootstrap sample; a bootstrap estimate will resample from the current bootstrap sample $x^{(b)}$, not $\left.x\right)$.
+    (d) Compute the $b^{t h}$ replicate of the "t" statistic, $t^{(b)}=\frac{\hat{\theta}^{(b)}-\hat{\theta}}{\widehat{s e}\left(\hat{\theta}^{(b)}\right)}$.
+
+## The Bootstrap t interval
+
+3. The sample of replicates $t^{(1)}, \ldots, t^{(B)}$ is the reference distribution for bootstrap $t$. Find the sample quantiles $t_{\alpha / 2}^{*}$ and $t_{1-\alpha / 2}^{*}$ from the ordered sample of replicates $t^{(b)}$.
+4. Compute $\widehat{s e}(\hat{\theta})$, the sample standard deviation of the replicates $\hat{\theta}^{(b)}$.
+5. Compute confidence limits
+$$
+\left(\hat{\theta}-t_{1-\alpha / 2}^{*} \widehat{s e}(\hat{\theta}), \quad \hat{\theta}+t_{1-\alpha / 2}^{*} \widehat{se}(\hat{\theta})\right)
+$$
+or
+$$
+\left(\hat{\theta}+t_{\alpha / 2}^{*} \widehat{s e}(\hat{\theta}), \quad \hat{\theta}-t_{\alpha / 2}^{*} \widehat{se}(\hat{\theta})\right)
+$$
+
+## Example (Bootstrap t confidence interval)
+
+- This example provides a function to compute a bootstrap t confidence interval for a univariate or a multivariate sample. 
+- The required arguments to the function are the sample data $x$, and the function statistic ($\hat{\theta}$) that computes the statistic. 
+- The default confidence level is 95%, the number of bootstrap replicates defaults to $B = 500$, and the number of replicates for estimating standard error defaults to $R=100$.
+
+## Example (Bootstrap t confidence interval)
+
+```{r}
+boot.t.ci <-
+function(x, B = 500, R = 100, level = .95, statistic){
+#compute the bootstrap t CI
+x <- as.matrix(x); n <- nrow(x); 
+stat <- numeric(B); se <- numeric(B)
+for (b in 1:B) {
+j <- sample(1:n, size = n, replace= TRUE)
+y <- x[j, ]
+stat[b] <- statistic(y) 
+se[b] <- boot.se(y, R = R, f=statistic)
+}
+stat0 <- statistic(x); se0 <- sd(stat)
+t.stats <- (stat - stat0)/se
+alpha <- 1 - level
+Qt <- quantile(t.stats, c(alpha/2, 1-alpha/2), type = 1) 
+names(Qt) <- rev(names(Qt))
+CI <- rev(stat0 - Qt * se0)
+}
+```
+
+## Example (Bootstrap t confidence interval)
+
+```{r}
+boot.se <- function(x, R, f) {
+#local function to compute the bootstrap 
+#estimate of standard error for statistic f(x) 
+x <- as.matrix(x); m <- nrow(x)
+th <- replicate(R, expr = {
+i <- sample(1:m, size = m, replace = TRUE) 
+f(x[i, ])
+})
+return(sd(th))
+}
+```
+
+## Example (Bootstrap t confidence interval)
+
+Compute a 95% bootstrap t confidence interval for the ratio statistic in our previous example.
+```{r}
+dat <- cbind(patch$y, patch$z) 
+stat <- function(dat){
+mean(dat[, 1]) / mean(dat[, 2]) }
+ci <- boot.t.ci(dat, statistic = stat, B=2000, R=200) 
+print(ci)
+```
+
+## The Jackknife
+
+The jackknife is like a "leave-one-out" type of cross-validation. Let $x=$ $x_{1}, \ldots, x_{n}$ be an observed random sample, and define the i-th jackknife sample $x_{(i)}$ to be the subset of $x$ that leaves out the i-th observation $x_i$. That is,
+$$
+x_{(i)}=x_{1}, \ldots, x_{i-1}, x_{i+1}, \ldots, x_{n}
+$$
+If $\widehat{\boldsymbol{\theta}}=T_{n}(x)$, define the i-th jackknife replicate $\widehat{\boldsymbol{\theta}}_{(i)}=T_{n-1}\left(x_{(i)}\right), i=1$, $\ldots, n$.
+
+## The jackknife estimate of bias
+
+- The jackknife estimate of bias is
+$$
+\widehat{bias}_{jack} = (n-1)(\overline{\hat{\theta}_{(\cdot)}} - \hat{\theta})
+$$
+where $\overline{\hat{\theta}_{(\cdot)}}=\frac{1}{n} \sum_{i=1}^{n} \hat{\theta}_{(i)}$ is the mean of the estimates from the leave-one-out samples, and $\hat{\theta}=\hat{\theta}(x)$ is the estimate computed from the original observed sample.
+- Note that the jackknife requires only n replications to estimate the bias; the bootstrap estimate of bias typically requires several hundred replicates.
+
+## Example (Jackknife estimate of bias)
+
+Compute the jackknife estimate of bias for the _patch_ data in the previous example. Recall
+```{r}
+data(patch, package = "bootstrap")
+n <- nrow(patch)
+y <- patch$y
+z <- patch$z
+theta.hat <- mean(y) / mean(z) 
+print(theta.hat)
+```
+
+
+## Example (Jackknife estimate of bias)
+
+Compute the jackknife replicates, leave-one-out estimates
+```{r}
+theta.jack <- numeric(n)
+for (i in 1:n) 
+    theta.jack[i] <- mean(y[-i]) / mean(z[-i]) 
+bias <- (n - 1) * (mean(theta.jack) - theta.hat)
+
+print(bias) #jackknife estimate of bias
+```
+
+
+## The jackknife estimate of standard error
+
+A jackknife estimate of standard error is
+$$
+\widehat{s e}_{j a c k}=\sqrt{\frac{n-1}{n} \sum_{i=1}^{n}\left(\hat{\theta}_{(i)}-\overline{\hat{\theta}_{(\cdot)}}\right)^{2}}
+$$
+for smooth statistics $\hat{\theta}$.
+
+## Example (Jackknife estimate of standard error)
+
+To compute the Jackknife estimate of standard error for the _patch_ data in the previous example, use the jackknife replicates
+```{r}
+se <- sqrt((n-1)*mean((theta.jack-mean(theta.jack))^2)) 
+se
+```
+
+## When the Jackknife Fails
+
+- The jackknife can fail when the statistic $\hat{\theta}$ is not "smooth." 
+- The statistic is a function of the data. Smoothness means that small changes in the data correspond to small changes in the statistic. 
+- The median is an example of a statistic that is not smooth.
+
+## Example (Failure of jackknife)
+
+In this example the jackknife estimate of standard error of the median is computed for a random sample of 10 integers from $1, 2, \dots, 100$.
+
+```{r}
+n <- 10
+x <- sample(1:100, size = n)
+#jackknife estimate of se 
+M <- numeric(n)
+for (i in 1:n) { y <- x[-i] #leave one out
+    M[i] <- median(y)
+}
+Mbar <- mean(M)
+print(sqrt((n-1)/n * sum((M - Mbar)^2)))
+```
+
+## Example (Failure of jackknife)
+
+```{r}
+#bootstrap estimate of se
+Mb <- replicate(1000, expr = {
+y <- sample(x, size = n, replace = TRUE)
+median(y) }) 
+print(sd(Mb))
+```
+
+## Jackknife-after-bootstrap
+
+- We have introduced bootstrap estimates of standard error and bias. These estimates are random variables. If we are interested in the variance of these estimates, one idea is to try the jackknife.
+- Recall that $\widehat{se}(\hat{\theta})$ is the sample standard deviation of $B$ bootstrap replicates of $\hat{\theta}$. Now, if we leave out the $i^{th}$ observation, the algorithm for estimation of standard error is to resample $B$ replicates from the $n-1$ remaining observations for each $i$. In other words, we would replicate the bootstrap itself. Fortunately, there is a way to avoid replicating the bootstrap.
+
+## Jackknife-after-bootstrap
+
+The jackknife-after-bootstrap computes an estimate for each "leave-one-out" sample. 
+
+- Let $J(i)$ denote the indices of bootstrap samples that do not contain $x_{i}$, and let $B(i)$ denote number of bootstrap samples that do not contain $x_{i}$. 
+- Compute the jackknife replication leaving out the $B-B(i)$ samples that contain $x_{i}$. Compute
+$$
+\widehat{s e}(\hat{\theta})=\widehat{\operatorname{se}}_{j a c k}\left(\widehat{\operatorname{se}}_{B(1)}, \ldots, \widehat{\operatorname{se}}_{B(n)}\right)
+$$
+where
+$$
+\widehat{s e}_{B(i)}=\sqrt{\frac{1}{B(i)} \sum_{j \in J(i)}\left[\hat{\theta}_{(j)}-\overline{\hat{\theta}}_{(J(i))}\right]^{2}}
+$$
+and
+$$
+\overline{\hat{\theta}_{(J(i))}}=\frac{1}{B(i)} \sum_{j \in J(i)} \hat{\theta}_{(j)}
+$$
+is the sample mean of the estimates from the leave- $x_{i}$-out jackknife samples.
+
+## Jackknife-after-bootstrap
+
+Use the jackknife-after-bootstrap procedure to estimate the standard error of
+$\widehat{se}(\hat{\theta})$ for the _patch_ data
+
+```{r}
+# initialize
+data(patch, package = "bootstrap")
+n <- nrow(patch)
+y <- patch$y
+z <- patch$z
+B <- 2000
+theta.b <- numeric(B)
+# set up storage for the sampled indices 
+indices <- matrix(0, nrow = B, ncol = n)
+```
+
+## Jackknife-after-bootstrap
+
+```{r}
+# jackknife-after-bootstrap step 1: run the bootstrap 
+for (b in 1:B) {
+i <- sample(1:n, size = n, replace = TRUE) 
+y <- patch$y[i]
+z <- patch$z[i]
+theta.b[b] <- mean(y) / mean(z)
+#save the indices for the jackknife 
+indices[b, ] <- i
+}
+#jackknife-after-bootstrap to est. se(se) 
+se.jack <- numeric(n)
+for (i in 1:n) {
+#in i-th replicate omit all samples with x[i] 
+keep <- (1:B)[apply(indices, MARGIN = 1,
+FUN = function(k) {!any(k == i)})] 
+se.jack[i] <- sd(theta.b[keep])
+}
+
+```
+
+## Jackknife-after-bootstrap
+
+```{r}
+print(sd(theta.b))
+print(sqrt((n-1) * mean((se.jack - mean(se.jack))^2)))
+```
+
+
+
+

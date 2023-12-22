@@ -1,0 +1,371 @@
+---
+title: 'DS4043: Introduction to Statistical Computing'
+author: "Dr. Zhijian Li"
+#date: "`r Sys.Date()`"
+output:
+  beamer_presentation: default
+  latex_engine: xelatex
+  html_document: default
+  html_notebook:
+    colortheme: default
+  ioslides_presentation:
+    widescreen: true
+    colortheme: default
+    css: ../custom.css
+    fontfamily: mathpazo
+    wide: yes
+  slidy_presentation: default
+---
+
+
+## Monte Carlo Method in Inference
+
+- Monte Carlo Methods for Estimation
+
+- Monte Carlo Methods for Hypothesis Tests
+
+
+## Monte Carlo Methods for Estimation
+
+- Estimation
+- Standard Error
+- Mean Square Error
+- Confidence Level
+
+
+## Estimation
+
+- Let $x_{i}^{j}$ denote the i-th random number from j-th Monte Carlo (MC) sample, where $i=1, \ldots, n$ and $j=1, \ldots, m$
+- The MC random numbers $x_{i}^{j}$ are i.i.d. from the distribution of $X$.
+- Let $\hat{\boldsymbol{\theta}}^{j}=g\left(x_{1}^{j}, \ldots, x_{n}^{j}\right)$ and $\hat{\boldsymbol{\theta}}=\frac{1}{m} \sum_{j=1}^{m} \hat{\boldsymbol{\theta}}^{j}$ denote the MC estimator of parameter estimator $\boldsymbol{\theta}$, where $\boldsymbol{\theta}=\mathrm{E}\left[\mathrm{g}\left(x_{1}, \ldots, x_{n}\right)\right]$
+
+## Example- Basic Monte Carlo estimation
+
+- Suppose that $X_{1}, X_{2}$ are i.i.d. from a standard normal distribution. Estimate the mean difference $E\left|X_{1}-X_{2}\right|$.
+
+- To obtain a Monte Carlo estimate of $\theta=E\left[g\left(X_{1}, X_{2}\right)\right]=E\left|X_{1}-X_{2}\right|$ based on $m$ replicates, generate random samples $x^{(j)}=\left(x_{1}^{(j)}, x_{2}^{(j)}\right)$ of size 2 from the standard normal distribution, $j=1, \ldots, m$. 
+- Then compute the replicates $\hat{\theta}^{(j)}=g_{j}\left(x_{1}, x_{2}\right)=\left|x_{1}^{(j)}-x_{2}^{(j)}\right|, j=1, \ldots, m$, and the mean of the replicates
+$$
+\hat{\theta}=\frac{1}{m} \sum_{i=1}^{m} \hat{\theta}^{(j)}=\overline{g\left(X_{1}, X_{2}\right)}=\frac{1}{m} \sum_{i=1}^{m}\left|x_{1}^{(j)}-x_{2}^{(j)}\right|
+$$
+
+## Example- Basic Monte Carlo estimation
+
+
+
+```{r}
+m <- 1000
+g <- numeric(m)
+for (i in 1:m) {
+x <- rnorm(2)
+g[i] <- abs(x[1] - x[2]) }
+est <- mean(g)
+est
+```
+We can derive the true value is $\theta=E\left|X_{1}-X_{2}\right| = 2/\sqrt{\pi}=1.128379$.
+
+## Standard Error
+
+- The standard error of a mean $\bar{X}$ of a sample size $n$ is $\sqrt{\operatorname{Var}(X) / n}$.
+
+- The "plug-in" estimate of the variance of $X$ is $\widehat{\operatorname{Var}}(x)=\frac{1}{n} \sum_{i=1}^{n}\left(x_{i}-\bar{x}\right)^{2}.$
+- The corresponding estimate of the standard error of $\bar{x}$ is
+$$
+\widehat{s e}(\bar{x})=\frac{1}{\sqrt{n}}\left\{\frac{1}{n} \sum_{i=1}^{n}\left(x_{i}-\bar{x}\right)^{2}\right\}^{1 / 2}=\frac{1}{n}\left\{\sum_{i=1}^{n}\left(x_{i}-\bar{x}\right)^{2}\right\}^{1 / 2}
+$$
+- Using the unbiased estimator of $\operatorname{Var}(X)$ we have
+$$
+\widehat{s e}(\bar{x})=\frac{1}{\sqrt{n}}\left\{\frac{1}{n-1} \sum_{i=1}^{n}\left(x_{i}-\bar{x}\right)^{2}\right\}^{1 / 2}
+$$
+In a Monte Carlo experiment, the sample size is large and the two estimates of standard error are approximately equal.
+
+## Example- Basic Monte Carlo estimation
+
+```{r}
+sqrt(sum((g - mean(g))^2)) / m  # MC value
+sqrt((2-4/pi)/1000)  # standard error of theta
+```
+We can derive the true value is $\mathrm{Var}\left|X_{1}-X_{2}\right| = 2-4/\pi$ and $se(\hat{\theta}) = \sqrt{\mathrm{Var}\left|X_{1}-X_{2}\right|/m}=  \sqrt{(2-4/\pi)/m}= 0.02695850$ .
+
+## Monte Carlo Integration
+
+- Recall that
+$$
+\operatorname{MSE}(\widehat{\boldsymbol{\theta}})=\mathrm{E}\left[(\widehat{\boldsymbol{\theta}}-\boldsymbol{\theta})^{2}\right]=[\operatorname{Bias}(\widehat{\boldsymbol{\theta}})]^{2}+\operatorname{Var}(\widehat{\boldsymbol{\theta}})
+$$
+
+- MC estimate of MSE: $\widehat{MSE}=\frac{1}{m} \sum_{j=1}^{m}\left(\widehat{\boldsymbol{\theta}}^{j}-\boldsymbol{\theta}\right)^{2}$, where $\widehat{\boldsymbol{\theta}}^{j}=\widehat{\boldsymbol{\theta}}\left(x_{1}, \ldots, x_{n}\right)$
+
+- Alternatively, $\widehat{\text{MSE}}=[\overline{\widehat{\boldsymbol{\theta}}}-\boldsymbol{\theta}]^{2}+\frac{1}{m} \sum_{j=1}^{m}\left[\widehat{\boldsymbol{\theta}}^{j}-\overline{\widehat{\boldsymbol{\theta}}}\right]^{2}, \overline{\widehat{\boldsymbol{\theta}}}=\frac{1}{m} \sum_{j=1}^{m} \widehat{\boldsymbol{\theta}}^{j}$
+
+## Confidence Level
+
+- A Monte Carlo method to assess the confidence level in an estimation procedure when the population distribution does not follow normal (or unknown)
+
+- If $(U, V)$ is a confidence interval estimate for an unknown parameter $\theta$, then $U$ and $V$ are statistics with distributions that depend on the distribution $F_X$ of the sampled population $X$. The confidence level is the probability that the interval $(U, V)$ covers the true value of the parameter $\theta$. Evaluating the confidence level is therefore an integration problem.
+
+## Example - Confidence interval for variance
+
+- If $X_{1}, \ldots, X_{n}$ is a random sample from a $\operatorname{Normal}\left(\mu, \sigma^{2}\right)$ distribution, $n \geq 2$, and $S^{2}$ is the sample variance, then
+$$
+V=\frac{(n-1) S^{2}}{\sigma^{2}} \sim \chi^{2}(n-1)
+$$
+- A one side $100(1-\alpha) \%$ confidence interval is given by $\left(0,(n-1) S^{2} / \chi_{\alpha}^{2}\right)$, where $\chi_{\alpha}^{2}$ is the $\alpha$-quantile of the $\chi^{2}(n-1)$ distribution. If the sampled population is normal with variance $\sigma^{2}$, then the probability that the confidence interval contains $\sigma^{2}$ is $1-\alpha$.
+  
+## Example - Confidence interval for variance
+The calculation of the 95% upper confidence limit (UCL) for a random sample size n = 20 from a Normal (0, 4).
+
+```{r}
+n <- 20
+alpha <- .05
+x <- rnorm(n, mean=0, sd=2)
+UCL <- (n-1) * var(x) / qchisq(alpha, df=n-1)
+```
+
+
+## Monte Carlo experiment to estimate a confidence level
+
+Suppose that $X \sim F_{X}$ is the random variable of interest and that $\theta$ is the target parameter to be estimated.
+
+- 1. For each replicate, indexed $j=1, \ldots, m$ :
+    - (a) Generate the $j^{t h}$ random sample, $X_{1}^{(j)}, \ldots, X_{n}^{(j)}$.
+    - (b) Compute the confidence interval $C_{j}$ for the $j^{t h}$ sample.
+    - (c) Compute $y_{j}=I\left(\theta \in C_{j}\right)$ for the $j^{t h}$ sample.
+- 2. Compute the empirical confidence level $\bar{y}=\frac{1}{m} \sum_{j=1}^{m} y_{j}$.
+
+## Example - MC estimate of confidence level
+
+- Refer to the previous example. We have $\mu=0, \sigma=2, n=20$, $m=1000$ replicates, and $\alpha=0.05$. The sample proportion of intervals that contain $\sigma^{2}=4$ is a Monte Carlo estimate of the true confidence level. This type of simulation can be conveniently implemented by using the replicate function.
+
+```{r}
+n <- 20; alpha <- .05
+UCL <- replicate(1000, expr = {
+x <- rnorm(n, mean = 0, sd = 2)
+(n-1) * var(x) / qchisq(alpha, df = n-1) })
+#count the number of intervals that contain sigma^2=4
+#or compute the mean to get the confidence level
+c(sum(UCL > 4), mean(UCL > 4) )
+```
+
+## MC estimate of confidence level - Variance
+
+- The estimator $\bar{y}$ is a sample proportion estimating the true confidence level $1-\alpha^{*}$, so $\operatorname{Var}(\bar{y})=\left(1-\alpha^{*}\right) \alpha^{*} / m$ and an estimate of standard error is $\widehat{s e}(\bar{y})=\sqrt{(1-\bar{y}) \bar{y} / m}$.
+
+- The standard error of the estimate in the previous example is $(0.95(1-0.95)/1000)^{1/2} = 0.00689$.
+
+
+## Example - MC estimate of confidence level
+
+- Another way to use the _replicate_ function.
+
+```{r}
+calcCI <- function(n, alpha) {
+y <- rnorm(n, mean = 0, sd = 2)
+return((n-1) * var(y) / qchisq(alpha, df = n-1))
+}
+UCL <- replicate(1000, expr=calcCI(n = 20, alpha=.05))
+mean(UCL > 4)
+```
+
+
+## Example - Empirical confidence level
+
+- Suppose that the sampled population is $\chi^{2}(2)$, which has variance 4 . We repeat the simulation, replacing the $N(0,4)$ samples with $\chi^{2}$ (2) samples.
+
+
+```{r}
+set.seed(12); n <- 20; alpha <- .05
+UCL <- replicate(1000, expr = {
+x <- rchisq(n, df = 2)
+(n-1) * var(x) / qchisq(alpha, df = n-1) })
+c(sum(UCL > 4), mean(UCL > 4) )
+```
+In this experiment, only 790 or 0.79% of the intervals contained the population variance, which is far from the 95% coverage under normality.
+
+## Monte Carlo Methods in Hypothesis Tests
+
+- Empirical Type I error rate
+
+- Power
+
+## Error Rate
+
+- Hypothesis: $H_{0}: \theta \in \Theta_{0}$ vs $H_{1}: \theta \in \Theta_{1}$, where $\Theta_{0}$ and $\Theta_{1}$ partition the parameter space $\Theta$
+- Type-I Error Rate: $\alpha=\operatorname{Pr}\left(H_{0}\right.$ is rejected $\mid H_{0}$ is true)
+- Type-II Error Rate: $\beta=\operatorname{Pr}\left(H_{0}\right.$ is not rejected | $H_{1}$ is true)
+
+## Monte Carlo experiment to assess Type I error rate
+
+- 1. For each replicate, indexed by $j=1, \ldots, m$ :
+    (a) Generate the $j^{\text {th }}$ random sample $x_{1}^{(j)}, \ldots, x_{n}^{(j)}$ from the null distribution.
+    (b) Compute the test statistic $T_{j}$ from the $j^{\text {th }}$ sample.
+    (c) Record the test decision $I_{j}=1$ if $H_{0}$ is rejected at significance level $\alpha$ and otherwise $I_{j}=0$.
+    
+- 2. Compute the proportion of significant tests $\frac{1}{m} \sum_{j=1}^{m} I_{j}$. This proportion is the observed Type I error rate.
+
+- If we denote the observed Type I error rate by $\hat{p}$, then an estimate of $s e(\hat{p})$ is
+$$
+\widehat{s e}(\hat{p})=\sqrt{\frac{\hat{p}(1-\hat{p})}{m}} \leq \frac{0.5}{\sqrt{m}} .
+$$
+
+## Example - Empirical Type I error rate
+
+Suppose that $X_{1}, \ldots, X_{20}$ are i.i.d. $N\left(\mu, \sigma^{2}\right)$. Test $H_{0}: \mu=500$ vs $H_{1}$ : $\mu>500$ at $\alpha=0.05$, under the null hypothesis, when $\sigma=100$
+$$
+T=\frac{\bar{X}-500}{S / \sqrt{20}} \sim t(19)
+$$
+Use MC method to compute an empirical probability of Type I error.
+
+## Example - Empirical Type I error rate
+
+```{r}
+n <- 20; alpha <- .05; mu0 <- 500; sigma <- 100
+m <- 10000         #number of replicates
+p <- numeric(m)    #storage for p-values
+for (j in 1:m) {
+x <- rnorm(n, mu0, sigma)
+ttest <- t.test(x, alternative = "greater", mu = mu0) 
+p[j] <- ttest$p.value
+}
+p.hat <- mean(p < alpha)
+se.hat <- sqrt(p.hat * (1 - p.hat) / m) 
+print(c(p.hat, se.hat))
+```
+
+
+## Example - Skewness test of normality
+
+- The skewness $\sqrt{\beta_{1}}$ of a random variable $X$ is defined by
+$$
+\sqrt{\beta_{1}}=\frac{E\left[\left(X-\mu_{X}\right)\right]^{3}}{\sigma_{X}^{3}}
+$$
+where $\mu_{X}=E[X]$ and $\sigma_{X}^{2}=\operatorname{Var}(X)$. 
+- A distribution is symmetric if $\sqrt{\beta_{1}}=0$, positively skewed if $\sqrt{\beta_{1}}>0$, and negatively skewed if $\sqrt{\beta_{1}}<0$. 
+- The sample coefficient of skewness is denoted by $\sqrt{b_{1}}$, and defined as
+$$
+\sqrt{b_{1}}=\frac{\frac{1}{n} \sum_{i=1}^{n}\left(X_{i}-\bar{X}\right)^{3}}{\left(\frac{1}{n} \sum_{i=1}^{n}\left(X_{i}-\bar{X}\right)^{2}\right)^{3 / 2}}
+$$
+- If the distribution of $X$ is normal, then $\sqrt{b_{1}}$ is asymptotically normal with mean 0 and variance $6 / n$. 
+
+
+## Example - Skewness test of normality
+
+- Normal distributions are symmetric, and a test for normality based on skewness rejects the hypothesis of normality for large values of $\left|\sqrt{b_{1}}\right|$. The hypotheses are
+$$
+  H_{0}: \sqrt{\beta_{1}}=0 ; \quad H_{1}: \sqrt{\beta_{1}} \neq 0,
+$$
+where the sampling distribution of the skewness statistic is derived under the assumption of normality.
+- Assess the Type I error rate for a skewness test of normality at $\alpha = 0.05$ based on the asymptotic distribution of $\sqrt{b_1}$
+- The vector of critical values cv for each of the sample sizes $n = 10, 20, 30, 50, 100,$ and 500 are
+```{r}
+n <- c(10, 20, 30, 50, 100, 500) #sample sizes,
+cv <- qnorm(.975, 0, sqrt(6/n)) #crit. values for each n.
+```
+- For sample size $n[i]$, $H_0$ is rejected if $|\sqrt{b_1}|>cv[i]$.
+
+## Example - Skewness test of normality
+    
+```{r}
+# compute the sample skewness statistic
+sk <- function(x) {
+  xbar <- mean(x)
+  m3 <- mean((x - xbar)^3)
+  m2 <- mean((x - xbar)^2)
+  return( m3 / m2^1.5 )
+}
+```
+
+## Example - Skewness test of normality
+    
+```{r}
+# n is a vector of sample sizes
+# we are doing length(n) different simulations
+skewness.cl= function(n,cv){
+p.reject <- numeric(length(n)) #to store sim. results 
+m <- 10000   #num. repl. each sim.
+for (i in 1:length(n)){
+  sktests <- numeric(m)   #test decisions
+  for (j in 1:m) {
+    x <- rnorm(n[i])
+    # test decision is 1 (reject) or 0
+      sktests[j] <- as.integer(abs(sk(x)) >= cv[i] )
+  }
+  p.reject[i] <- mean(sktests) # proportion rejected
+}
+return(p.reject)
+}
+skewness.cl(n,cv)
+```
+    
+## Example - Skewness test of normality
+
+- With $m = 10000$ replicates the standard error of the estimate is approximately $\sqrt{0.05 \times 0.95/m} =0.0022$.
+- For finite samples one should use
+$$
+\operatorname{Var}\left(\sqrt{b_{1}}\right)=\frac{6(n-2)}{(n+1)(n+3)}
+$$
+Repeating the simulation with
+
+```{r}
+cv <- qnorm(.975, 0, sqrt(6*(n-2) / ((n+1)*(n+3)))) 
+round(cv, 4)
+skewness.cl(n,cv)
+```
+
+## Power of a test
+
+- In a test of hypotheses $H_{0}$ vs $H_{1}$, a Type II error occurs when $H_{1}$ is true, but $H_{0}$ is not rejected. 
+- The power of a test is given by the power function $\pi: \Theta \rightarrow[0,1]$, which is the probability $\pi(\theta)$ of rejecting $H_{0}$ given that $H_1$ is true.
+- Thus, for a given $\theta_{1} \in \Theta_{1}$, the probability of Type II error is $1-\pi\left(\theta_{1}\right)$. 
+- Power= $\pi\left(\theta_{1}\right)$ = P(accept $H_1$ | $H_1$ True) = 1- P(reject $H_1$ | $H_1$ True) = $1-\beta$ where $\beta$ is the Type II error.
+- Ideally, we would prefer a test with low probability of error. Type I error is controlled by the choice of the significance level $\alpha$. Low Type II error corresponds to high power under the alternative hypothesis.
+
+## Monte Carlo experiment to estimate power of a test against a fixed alternative
+
+1. Select a particular value of the parameter $\theta_{1} \in \Theta_1$.
+2. For each replicate, indexed by $j=1, \ldots, m$ :
+    (a) Generate the $j^{t h}$ random sample $x_{1}^{(j)}, \ldots, x_{n}^{(j)}$ under the conditions of the alternative $\theta=\theta_{1}$.
+    (b) Compute the test statistic $T_{j}$ from the $j^{\text {th }}$ sample.
+    (c) Record the test decision: set $I_{j}=1$ if $H_{0}$ is rejected at significance level $\alpha$, and otherwise set $I_{j}=0$.
+3. Compute the proportion of significant tests $\hat{\pi}\left(\theta_{1}\right)=\frac{1}{m} \sum_{j=1}^{m} I_{j}$.
+
+## Example - Empirical power
+Use simulation to estimate power and plot an empirical power curve for the t-test in Example (Type I error rate). 
+
+```{r}
+n <- 20 ; m <- 1000
+mu0 <- 500 ; sigma <- 100
+mu <- c(seq(450, 650, 10)) #alternatives 
+M <- length(mu)
+power <- numeric(M)
+```
+
+## Example - Empirical power
+ 
+```{r}
+for (i in 1:M) {
+mu1 <- mu[i]
+pvalues <- replicate(m, expr = {
+#simulate under alternative mu1
+x <- rnorm(n, mean = mu1, sd = sigma) 
+ttest <- t.test(x, alternative = "greater", mu = mu0) 
+ttest$p.value } )
+power[i] <- mean(pvalues <= .05) }
+se <- sqrt(power * (1-power) / m)
+```
+
+## Example - Empirical power
+
+```{r out.width="50%"}
+#install.packages("ggplot2")
+library(ggplot2)
+df <- data.frame(mean=mu, power=power,
+upper=power+2*se, lower=power-2*se)
+ggplot(df, aes(x=mean, y=power)) + geom_line() +
+geom_vline(xintercept=500, lty=2) + 
+geom_hline(yintercept=c(0,.05), lty=1:2) + 
+geom_errorbar(aes(ymin=lower,ymax=upper),width=0.2,lwd=1.5)
+```
+
+
+

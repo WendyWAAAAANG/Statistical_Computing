@@ -1,0 +1,491 @@
+---
+title: 'DS4043: Introduction to Statistical Computing'
+author: "Dr. Zhijian Li"
+#date: "`r Sys.Date()`"
+output:
+  beamer_presentation: default
+  latex_engine: xelatex
+  html_document: default
+  html_notebook:
+    colortheme: default
+  slidy_presentation: default
+  ioslides_presentation:
+    colortheme: default
+    css: ../custom.css
+    fontfamily: mathpazo
+    wide: yes
+---
+
+
+## Methods for Generating Random Variables
+
+- Introduction
+- The Inverse Transform Method
+- The Acceptance-Rejection Method
+- Transformation Methods
+- Sums and Mixtures
+- Multivariate Distributions
+
+## Introduction
+
+- To simulate random variables from specified probability distributions
+- A simple case: to draw an observation at random from a finite population, a method of generating random observations from the discrete uniform distribution is required.
+- A suitable generator of uniform pseudo-random numbers is essential.
+- The uniform pseudo-random number generator in $R$ is 'runif'.
+- A vector of $n$ random numbers between 0 and 1 , use runif(n).
+- To generate $n$ Uniform $(a, b)$ numbers, use runif $(n, a, b)$
+- To generate an $n$ by $m$ matrix between 0 and 1, use matrix(runif($n*m$), nrow=n, ncol=m) or 
+matrix(runif($n * m$), n, m).
+
+## Sample function
+
+- The sample function can be used to sample from a finite population, with or without replacement.
+
+```{r}
+# toss some coins
+sample(0:1,size = 10, replace = T)
+#choose some lottery numbers
+sample(1:100,size = 6, replace = FALSE)
+
+```
+
+## Sample function
+
+- The sample function can be used to sample from a finite population, with or without replacement.
+
+```{r}
+#sample from a multinomial distribution
+x <- sample(1:3, size = 100, replace=TRUE, 
+            prob = c(0.2,0.3,.5))
+table(x)
+```
+
+## Common Probability Distributions - Normal Distribution
+- Density, distribution function, quantile function and random generation for the normal distribution with mean equal to mean and standard deviation equal to sd.
+- dnorm(x, mean = 0, sd = 1, log = FALSE)
+- pnorm(q, mean = 0, sd = 1, lower.tail = TRUE, log.p = FALSE)
+- qnorm(p, mean = 0, sd = 1, lower.tail = TRUE, log.p = FALSE)
+- rnorm(n, mean = 0, sd = 1)
+- See ?rnorm for more details
+
+## Common Probability Distributions - Binomial Distribution
+
+- Four functions are documented in the help topic Binomial:
+- dbinom(x, size, prob, log = FALSE)
+- pbinom(q, size, prob, lower.tail = TRUE, log.p = FALSE)
+- qbinom(p, size, prob, lower.tail = TRUE, log.p = FALSE)
+- rbinom(n, size, prob)
+
+## A partial list of available probability distributions and parameters
+
+![generate number table](4_generate number.png)
+
+## Inverse Transform Method
+
+- *Theorem 1.* If $X$ is a continuous random variable with cdf $F_X(x)$, then $U =F_{X}(x) \sim$ Uniform(0,1).
+
+- The inverse transform method of generating random variables applies the probability integral transformation. Define the inverse transformation
+$$
+  F_{X}^{-1}(u)=\inf \left\{x: F_{X}(x)=u\right\}, \quad 0<u<1 .
+$$
+  1. Derive the inverse function $F_{X}^{-1}(u)$.
+  2. Write a command or function to compute $F_{X}^{-1}(u)$.
+  3. For each random variate required:
+    - Generate a random $u$ from Uniform $(0,1)$.
+    - Deliver $x=F_{X}^{-1}(u)$.
+
+## Example - Using Inverse Transform Method
+
+- Simulate a random sample from the distribution with density $f_X(x)=3x^2, 0 < x < 1$.
+- Here $F_{X}(x)=x^{3}$ for $0<x<1$, and $F_{X}^{-1}(u)=u^{1/3}$. Generate all $n$ required random uniform numbers as vector $u$. Then $u^{1/3}$ is a vector of length $\mathrm{n}$ containing the sample $x_{1}, \ldots, x_{n}$.
+
+
+## Example - Using Inverse Transform Method
+
+
+```{r, out.width="45%"}
+n <- 1000
+u <- runif(n)
+x <- u^(1/3)
+hist(x, prob = TRUE) # density histogram of sample
+y <- seq(0,1,.01)
+lines(y,3*y^2) #density curve f(x)
+```
+
+
+## Example - exponential distribution
+
+- Question: Generate a random sample from the exponential distribution with mean $1 / \lambda$.
+
+- Method: If $X \sim \operatorname{Exp}(\lambda)$, then for $x>0$ the cdf of $X$ is $F_{X}(x)=1-e^{-\lambda x}$. The inverse transformation is $F_{X}^{-1}(u)=-\frac{1}{\lambda} \log (1-u)$. Note that $U$ and $1-U$ have the same distribution and it is simpler to set $x=-\frac{1}{\lambda} \log (u)$. To generate a random sample of size $\mathrm{n}$ with parameter lambda: $-\log (\operatorname{runif}(\mathrm{n})) / \lambda$ 
+  
+## Discrete Case
+  
+- The inverse transform method can also be applied to discrete distributions. If $X$ is a discrete random variable and
+$\ldots<x_{i-1}<x_{i}<x_{i+1}<\ldots$ are the points of discontinuity of $F_{X}(x)$, then the inverse transformation is $F_{X}^{-1}(u)=x_{i}$, where $F_{X}\left(x_{i-1}\right)<u \leq F_{X}\left(x_{i}\right).$
+For each random variate required:
+  1. Generate a random $u$ from Uniform $(0,1)$.
+  2. Deliver $x_{i}$ where $F\left(x_{i-1}\right)<u \leq F \left(x_{i}\right)$.
+
+## Example - Bernoulli
+
+- Generate a random sample of Bernoulli(p = 0.4) variates.
+- In this example, $F_{X}(0)=f_{X}(0)=1-p$ and $F_{X}(1)=1$. Thus, $F_{X}^{-1}(u)=1$ if $u>0.6$ and $F_{X}^{-1}(u)=0$ if $u \leq 0.6$. The generator should therefore deliver the numerical value of the logical expression $u>0.6$.
+
+```{r}
+n <- 1000; p <- 0.4; u <- runif(n)
+x <- as.integer(u>0.6)  # (u > 0.6) is a logical vector
+mean(x)
+var(x)
+```
+
+## Example - Bernoulli
+
+- In $\mathrm{R}$ one can use the rbinom (random binomial) function with size=1 to generate a Bernoulli sample. Another method is to sample from the vector $(0,1)$ with probabilities $(1-p, p)$. 
+
+```{r}
+n<- 10; p=0.6; rbinom(n, size <- 1, prob=p)
+sample(c(0,1), size = n, replace = TRUE, prob = c(.6,.4))
+```
+
+
+## Example - Geometric
+
+- Generate a random geometric sample with parameter $p=1/4$.
+The pmf is $f(x)=p q^{x}, x=0,1,2, \ldots$, where $q=1-p$. At the points of discontinuity $x=0,1,2, \ldots$, the cdf is $F(x)=1-q^{x+1}$. For each sample element we need to generate a random uniform $u$ and solve
+$$
+  \begin{aligned}
+&1-q^{x}<u \leq 1-q^{x+1} . \\
+&x+1=\lceil\log (1-u) / \log (q)\rceil .
+\end{aligned}
+$$
+  
+```{r}
+n <- 100; p <- 0.25; u <- runif(n)
+k <- ceiling(log(1-u) / log(1-p)) - 1
+```
+
+<!--
+## Example - Logarithmic distribution
+
+Simulate a Logarithmic $(\theta)$ random sample. A random variable $X$ has the logarithmic distribution if
+$$
+  f(x)=P(X=x)=\frac{a \theta^{x}}{x}, \quad x=1,2, \ldots
+$$
+  where $0<\theta<1$ and $a=(-\log (1-\theta))^{-1}$.
+
+## logarithm
+
+-->
+
+
+## The Acceptance-Rejection Method
+
+![AR method](4_AR method.png)
+
+## The Acceptance-Rejection Method
+
+- The last equality is simply evaluating the cdf of $U$. The total probability of acceptance for any iteration is therefore
+$$
+  \sum_{u} P(\operatorname{accept} \mid y) P(Y=y)=\sum_{u} \frac{f(y)}{c g(y)} g(y)=\frac{1}{c},
+$$
+  To see that the accepted sample has the same distribution as $X$, apply Bayes' Theorem. In the discrete case, for each $k$ such that $f(k)>0$,
+$$
+\begin{aligned}
+P(k \mid \text { accepted })&=\frac{P(\text { accepted } \mid k) g(k)}{P(\text { accepted })}\\
+&=\frac{[f(k) /(c g(k))] g(k)}{1 / c}=f(k).
+\end{aligned}
+$$
+The continuous case is similar.
+
+## Example - beta distribution
+
+- The Beta $(2,2)$ density is $f(x)=6 x(1-x), 0<x<1$. Let $g(x)$ be the Uniform $(0,1)$ density. Then $f(x) / g(x) \leq 6$ for all $0<x<1$, so $c=6$. A random $x$ from $g(x)$ is accepted if
+$$
+\frac{f(x)}{c g(x)}=\frac{6 x(1-x)}{6(1)}=x(1-x)>u .
+$$
+On average, $c n=6000$ iterations (12000 random numbers) will be required for a sample size 1000 . In the following simulation, the counter $j$ for iterations is not necessary, but included to record how many iterations were actually needed to generate the 1000 beta variates.
+
+## Example - beta distribution
+
+```{r}
+n <- 1000
+k <- 0 #counter for accepted
+j <- 0 #iterations
+y <- numeric(n)
+while (k < n) {
+u <- runif(1)
+j <- j + 1
+x <- runif(1) #random variate from g
+if (x * (1-x) > u) {
+#we accept x
+k <- k + 1
+y[k] <- x}
+}
+j
+```
+
+
+## Example - beta distribution
+
+```{r, cache=TRUE}
+#compare empirical and theoretical percentiles
+p <- seq(.1, .8, .1)
+Qhat <- quantile(y, p) #quantiles of sample
+Q <- qbeta(p, 2, 2) #theoretical quantiles
+se <- sqrt(p * (1-p) / (n * dbeta(Q, 2, 2)^2)) 
+round(rbind(Qhat, Q, se), 3) #n=1000
+```
+
+```{r include=FALSE}
+n <- 10000
+k <- 0 #counter for accepted
+j <- 0 #iterations
+y <- numeric(n)
+while (k < n) {
+u <- runif(1)
+j <- j + 1
+x <- runif(1) #random variate from g
+if (x * (1-x) > u) {
+#we accept x
+k <- k + 1
+y[k] <- x
+}
+}
+p <- seq(.1, .8, .1)
+Qhat <- quantile(y, p) #quantiles of sample
+Q <- qbeta(p, 2, 2) #theoretical quantiles
+se <- sqrt(p * (1-p) / (n * dbeta(Q, 2, 2)^2))
+```
+
+```{r}
+round(rbind(Qhat, Q, se), 3) #n=10000
+```
+
+
+## Transformation on Methods
+
+- Many types of transformations other than the probability inverse transformation can be applied to simulate random variables. Some examples are
+  1. If $Z \sim \mathrm{N}(0,1)$, then $V=Z^{2} \sim \chi^{2}(1)$.
+  2. If $U \sim \chi^{2}(m)$ and $V \sim \chi^{2}(n)$ are independent, then $F=\frac{U / m}{V / n}$ has the $F$ distribution with $(m, n)$ degrees of freedom.
+  3. If $Z \sim \mathrm{N}(0,1)$ and $V \sim \chi^{2}(n)$ are independent, then $T=\frac{Z}{\sqrt{V / n}}$ has the Student $t$ distribution with $n$ degrees of freedom.
+  4. If $U, V \sim \operatorname{Unif}(0,1)$ are independent, then
+$$
+\begin{aligned}
+&Z_{1}=\sqrt{-2 \log U} \cos (2 \pi V) \\
+&Z_{2}=\sqrt{-2 \log V} \sin (2 \pi U)
+\end{aligned}
+$$
+are independent standard normal variables.
+
+
+## Transformation on Methods
+
+5. If $U \sim \operatorname{Gamma}(r, \lambda)$ and $V \sim \operatorname{Gamma}(s, \lambda)$ are independent, then $X=$ $\frac{U}{U+V}$ has the $\operatorname{Beta}(r, s)$ distribution.
+6. If $U, V \sim \operatorname{Unif}(0,1)$ are independent, then
+$$
+X=\left\lfloor 1+\frac{\log (V)}{\log \left(1-(1-\theta)^{U}\right)}\right\rfloor
+$$
+has the Logarithmic $(\theta)$ distribution, where $\lfloor x\rfloor$ denotes the integer part of $x$.
+
+## Example - Gamma and Beta distribution
+
+- If $U \sim \operatorname{Gamma}(r, \lambda)$ and $V \sim \operatorname{Gamma}(s, \lambda)$ are independent, then
+$$
+X=\frac{U}{U+V}
+$$
+has the $\operatorname{Beta}(r, s)$ distribution. This transformation determines an algorithm for generating random $\operatorname{Beta}(a, b)$ variates.
+  1. Generate a random $u$ from $\operatorname{Gamma}(a, 1)$.
+  2. Generate a random $v$ from $\operatorname{Gamma}(b, 1)$.
+  3. Deliver $x=\frac{u}{u+v}$.
+
+## Example - Gamma and Beta distribution
+
+This method is applied below to generate a random Beta(3, 2) sample.
+```{r, out.width="40%"}
+n <- 1000; a <- 3; b <- 2
+u <- rgamma(n, shape=a, rate=1)
+v <- rgamma(n, shape=b, rate=1)
+x <- u / (u + v)
+q <- qbeta(ppoints(n), a, b)
+qqplot(q, x, cex=0.25, xlab="Beta(3, 2)", ylab="Sample")
+abline(0, 1)
+```
+
+<!--
+## Example - Logarithmic distribution
+
+- This example provides an efficient generator for the logarithmic distribution
+  1. Generate $u$ from $\operatorname{Unif}(0,1)$.
+  2. Generate $v$ from $\operatorname{Unif}(0,1)$.
+  3. Deliver $x=\left\lfloor 1+\log (v) / \log \left(1-(1-\theta)^{u}\right)\right\rfloor$.
+
+
+## Example - Logarithmic distribution
+
+Below is a comparison of the Logarithmic(0.5) distribution with a sample
+generated using transformation
+```{r}
+n <- 1000; theta <- 0.5
+u <- runif(n) #generate logarithmic sample
+v <- runif(n)
+x <- floor(1 + log(v) / log(1 - (1 - theta)^u))
+k <- 1:max(x) #calc. logarithmic probs.
+p <- -1 / log(1 - theta) * theta^k / k #density of logm
+se <- sqrt(p*(1-p)/n)
+p.hat <- tabulate(x)/n
+print(round(rbind(p.hat, p, se), 3))
+```
+
+-->
+
+## Sums and Mixtures
+
+Let $X_{1}, \ldots, X_{n}$ be independent and identically distributed with distribution $X_{j} \sim X$, and let $S=X_{1}+\cdots+X_{n}$. The distribution function of the sum $S$ is called the $n$-fold convolution of $X$ and denoted $F_{X}^{*(n)}$. It is straightforward to simulate a convolution by directly generating $X_{1}, \ldots, X_{n}$ and computing the sum.
+
+
+## Convolution Distributions
+
+- Chi-square($v$): sum of $v$ i.i.d. squared $N(0,1)$
+- NegBin$(r,p)$: sum of $r$ i.i.d. Geom($p$)
+- Gamma$(r,\lambda)$: sum of $r$ i.i.d. Exp$(\lambda)$
+
+## Example - Chi-square
+
+- Steps to generate a random sample of size $n$ from $\chi^{2}(\nu)$ are as follows:
+  1. Fill an $n \times \nu$ matrix with $n \nu$ random $\mathrm{N}(0,1)$ variates.
+  2. Square each entry in the matrix (1).
+  3. Compute the row sums of the squared normals. Each row sum is one random observation from the $\chi^{2}(\nu)$ distribution.
+  4. Deliver the vector of row sums.
+
+## Example - Chi-square
+
+```{r}
+n <- 1000
+nu <- 2
+X <- matrix(rnorm(n*nu), n, nu)^2 #matrix of sq. normals
+#sum the squared normals across each row: method 1
+y <- rowSums(X)
+#method 2
+y <- apply(X, MARGIN=1, FUN=sum) #a vector length n
+mean(y)  # mean is nu
+var(y)   # var is 2*nu
+```
+
+
+## Mixtures
+
+A random variable $X$ is a discrete mixture if the distribution of $X$ is a weighted sum $F_{X}(x)=\sum \theta_{i} F_{X_{i}}(x)$ for some sequence of random variables $X_{1}, X_{2}, \ldots$ and $\theta_{i}>0$ such that $\sum_{i} \theta_{i}=1$. The constants $\theta_{i}$ are called the mixing weights or mixing probabilities. Although the notation is similar for sums and mixtures, the distributions represented are different.
+
+A random variable $X$ is a continuous mixture if the distribution of $X$ is $F_{X}(x)=\int_{-\infty}^{\infty} F_{X \mid Y=y}(x) f_{Y}(y) d y$ for a family $X \mid Y=y$ indexed by the real numbers $y$ and weighting function $f_{Y}$ such that $\int_{-\infty}^{\infty} f_{Y}(y) d y=1$.
+
+## Example - Mixtures
+
+Let $X_1$ ~ Gamma(2, 2) and $X_2$  ~ Gamma(2, 4) be independent. Compare the histograms of the samples generated by the convolution $S = X_1 + X_2$ and the mixture $F_x= 0.5 F_{x_1} + 0.5 F_{x_2}$.
+
+```{r}
+n <- 1000
+x1 <- rgamma(n, 2, 2)
+x2 <- rgamma(n, 2, 4)
+s <- x1 + x2 #the convolution
+u <- runif(n)
+k <- as.integer(u > 0.5) #vector of 0's and 1's
+x <- k * x1 + (1-k) * x2 #the mixture
+```
+
+## Example - Mixtures
+
+```{r, out.width="60%"}
+par(mfcol=c(1,2)) #two graphs per page
+hist(s, prob=TRUE, xlim=c(0,5), ylim=c(0,1))
+hist(x, prob=TRUE, xlim=c(0,5), ylim=c(0,1))
+par(mfcol=c(1,1)) #restore display
+```
+
+
+## Example - Mixture of several gamma distributions
+
+- Let $F_{X}=\sum_{j=1}^{5} \theta_{j} F_{X_{j}}$ where $X_{j} \sim \operatorname{Gamma}\left(3, \lambda_{j}\right)$ are independent, with rates $\lambda=(1,1.5,2,2.5,3)$, and mixing probabilities $\theta=(0.1,0.2,0.2,0.3,0.2)$.
+
+This example is similar to the previous one. Sample from 1:5 with probability weights $\theta$ to get a vector length $\mathrm{n}$. The $i^{t h}$ position in this vector indicates which of the five gamma distributions is sampled to get the $i^{t h}$ element of the sample. This vector is used to select the correct rate parameter from the vector $\lambda$.
+
+## Example - Mixture of several gamma distributions
+
+```{r, out.width="50%"}
+n <- 5000
+p <- c(.1,.2,.2,.3,.2)
+lambda <- c(1,1.5,2,2.5,3)
+k <- sample(1:5, size=n, replace=TRUE, prob=p)
+rate <- lambda[k]
+x <- rgamma(n, shape=3, rate=rate)
+plot(density(x), xlim=c(0,15), ylim=c(0,1),
+lwd=3, xlab="x", main="", col="red")
+for (i in 1:5) lines(density(rgamma(n, 3, lambda[i])))
+```
+
+
+## Multivariate Normal Distribution
+
+A random vector $X=\left(X_{1}, \ldots, X_{d}\right)$ has a $d$-dimensional multivariate normal (MVN) distribution denoted $N_{d}(\mu, \Sigma)$ if the density of $X$ is
+$$
+f(x)=\frac{1}{(2 \pi)^{d / 2}|\Sigma|^{1 / 2}} \exp \left\{-(1 / 2)(x-\mu)^{T} \Sigma^{-1}(x-\mu)\right\}, \quad x \in \mathbb{R}^{d},
+$$
+where $\mu=\left(\mu_{1}, \ldots, \mu_{d}\right)^{T}$ is the mean vector and $\Sigma$ is a $d \times d$ symmetric positive definite matrix
+$$
+\Sigma=\left[\begin{array}{cccc}
+\sigma_{11} & \sigma_{12} & \ldots & \sigma_{1 d} \\
+\sigma_{21} & \sigma_{22} & \ldots & \sigma_{2 d} \\
+\vdots & \vdots & & \vdots \\
+\sigma_{d 1} & \sigma_{d 2} & \ldots & \sigma_{d d}
+\end{array}\right]
+$$
+
+## Multivariate Normal Distribution
+
+- Recall that if $Z \sim N_{d}(\mu, \Sigma)$, then the linear transformation $C Z+b$ is multivariate normal with mean $C \mu+b$ and covariance $C \Sigma C^{T}$. If $Z$ is $N_{d}\left(0, I_{d}\right)$, then
+$$
+C Z+b \sim N_{d}\left(b, C C^{T}\right) .
+$$
+Suppose that $\Sigma$ can be factored so that $\Sigma=C C^{T}$ for some matrix $C$. Then
+$$
+C Z+\mu \sim N_{d}(\mu, \Sigma)
+$$
+and $C Z+\mu$ is the required transformation.
+The required factorization of $\Sigma$ can be obtained by the spectral decomposition method (eigenvector decomposition), Choleski factorization, or singular value decomposition (svd). The corresponding $\mathrm{R}$ functions are _eigen, chol,_ and _svd_.
+
+## Method for generating multivariate normal samples
+
+- To generate a random sample of size $n$ from the $N_{d}(\mu, \Sigma)$ distribution:
+  1. Generate an $n \times d$ matrix $Z$ containing $n d$ random $N(0,1)$ variates ( $n$ random vectors in $\mathbb{R}^{d}$ ).
+  2. Compute a factorization $\Sigma=Q^{T} Q$.
+  3. Apply the transformation $X=Z Q+J \mu^{T}$.
+  4. Deliver the $n \times d$ matrix $X$. Each row of $X$ is a random variate from the $N_{d}(\mu, \Sigma)$ distribution.
+  
+- The $X=Z Q+J \mu^{T}$ transformation can be coded in $\mathrm{R}$ as follows. Recall that the matrix multiplication operator is $\% * \%$.
+
+## Example - multivariate normal
+
+- We use _mvrnorm(n = 1, mu, Sigma)_ from the package _MASS_.
+- In this example, we generate a bivariate normal sample with zero mean vector and
+$$
+\Sigma=\left[\begin{array}{ll}
+1.0 & 0.9 \\
+0.9 & 1.0
+\end{array}\right]
+$$
+
+## Example - multivariate normal
+```{r, out.width="40%"}
+library(MASS)
+mu <- c(0,0)
+Sigma <- matrix(c(1,0.9,.9,1),2,2)
+x <- mvrnorm(n = 100, mu, Sigma)
+colMeans(x)
+cov(x)
+```
+
+## Example - multivariate normal
+```{r, out.width="65%"}
+plot(x, xlab = "x", ylab = "y", pch = 20)
+```
+

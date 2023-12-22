@@ -1,0 +1,229 @@
+---
+title: "Homework Assignment 2"
+author: "DS4043, Spring 2023"
+date: "__Due on March 29, 2023 at 11:59 pm__"
+output: pdf_document
+---
+
+
+```{r setup, include=FALSE}
+library(knitr)
+# set global chunk options: images will be 7x5 inches
+knitr::opts_chunk$set(fig.width=7, fig.height=5)
+options(digits = 4)
+
+
+## indents are for indenting r code as formatted text
+## They may need to be adjusted depending on your OS
+# if your output looks odd, increase or decrease indent
+indent1 = '    '
+indent2 = '        '
+indent3 = '            '
+#library(tidyverse)
+#library(reshape2)
+```
+
+
+1. Consider the multivariate normal distribution vector $\mathrm{X}=\left(\mathrm{X}_{1}, \mathrm{X}_{2}, \mathrm{X}_{3}\right)^{\mathrm{T}}$ having mean vector $\boldsymbol{\mu}=(0,1,2,)^{\mathrm{T}}$ and covariance matrix
+
+$$
+  \boldsymbol{\Sigma}=\left[\begin{array}{ccc}
+                            1 & -0.5 & 0.5 \\
+                            -0.5 & 1 & -0.5 \\
+                            0.5 & -0.5 & 1
+                            \end{array}\right]
+$$
+    
+a) Generate 100 random observations from the multivariate normal distribution given above with _set.seed(12)_. (Hint: see _?mvrnorm_ ) You may need to use the package MASS.
+
+```{r indent=indent1}
+# install.packages("MASS")
+library(MASS) # you may need to use this package 
+set.seed(12)
+
+miu <- c(0, 1, 2)
+Sigma <- matrix(c(1, -0.5, 0.5, -0.5, 1, -0.5, 0.5, -0.5, 1), ncol = 3)
+X <- mvrnorm(n = 100, mu = miu, Sigma = Sigma)
+head(X)
+```
+
+b) Construct a scatterplot matrix for $\mathbf{X}$ and add a fitted smooth density curve on the diagonal panels for each $\mathrm{X}_{1}, \mathrm{X}_{2}, \mathrm{X}_{3}$ to verify that the location and correlation for each plot agrees with the parameters of the corresponding bivariate distributions.
+
+```{r}
+# install.packages("car")
+#library(car)
+#scaterplotMatrix(X, main = 'Scatterplot Matrix')
+# install.packages("psych")
+library(psych)
+pairs.panels(X, 
+             smooth = TRUE,
+             hist.col = "#00AFBB",
+             density = TRUE,  # show density plots
+             ellipses = TRUE # show correlation ellipses
+             )
+# method = "pearson", # correlation method
+```
+
+c) Obtain the correlation plot for the generated sample $\mathbf{X}$, where coefficients are added to the plot whose magnitude are presented by different colors. Let the visualization method of correlation matrix to be ellipse.
+
+```{r indent=indent1,message=FALSE}
+# install.packages("corrplot")
+library(corrplot)  # you may need to use this package 
+
+M <- cor(X)
+corrplot(M, method = "ellipse", type = "lower", tl.col = "black", tl.srt = 45)
+```
+
+    
+d) Given the covariance matrix $\Sigma$, find $\sigma_{x_1}$, $\sigma_{x_2}$ and $\rho_{x_1x_2}$. Consider the joint PDF of bivariate normal distribution
+
+$$
+  \begin{aligned}
+&f_{X Y}(x, y)=\frac{1}{2 \pi \sigma_{X} \sigma_{Y} \sqrt{1-\rho^{2}}} \\
+&\exp \left\{-\frac{1}{2\left(1-\rho^{2}\right)}\left[\left(\frac{x-\mu_{X}}{\sigma_{X}}\right)^{2}+\left(\frac{y-\mu_{Y}}{\sigma_{Y}}\right)^{2}-2 \rho \frac{\left(x-\mu_{X}\right)\left(y-\mu_{Y}\right)}{\sigma_{X} \sigma_{Y}}\right]\right\},
+\end{aligned}
+$$
+sketch a surface plot for $X_{1}$ and  $X_{2}$, based on their bivariate probability density function. (Hint: if you want to use _curve3d_, please install and use the package _emdbook_)
+
+```{r indent=indent1, warning=FALSE}
+# install.packages("emdbook")
+library(emdbook) # you may need to use this package 
+
+# calculate mean of x.
+mean_x1 <- mean(X[, 1])
+mean_x2 <- mean(X[, 2])
+# calculate the standard derivation of x.
+covX <- cov(X)
+sigma_x1 <- sqrt(covX[1, 1])
+sigma_x2 <- sqrt(covX[2, 2])
+rho_x1x2 <- covX[1, 2] / (sigma_x1 * sigma_x2)
+
+f <- function(x, y) {
+  term1 <- ((X[, 1]-mean_x1)/sigma_x1)^2
+  term2 <- ((X[, 2]-mean_x2)/sigma_x2)^2
+  term3 <- -2*rho_x1x2*(X[, 1]-mean_x1)*(X[, 2]-mean_x2)/(sigma_x1 * sigma_x2)
+  z <- 1/(2 * pi * sigma_x1 * sigma_x2 * sqrt(1-rho_x1x2^2)) * exp(-1/(2*(1-rho_x1x2^2))*(term1+term2+term3))
+  dmvnorm(cbind(x, y), mu = c(mean_x1, mean_x2), Sigma = covX[1:2, 1:2])
+}
+
+curve3d(f(x, y), xlim = c(-3, 3), ylim = c(-3, 3), sys3d = "persp")
+```
+  
+e) Sketch 3-D scatter plots for each of $X_{1}, X_{2}$ and $X_{3}$ as a $z$ axis and rest two variables as $x$ and $y$ axes. Put these 3 plots in one picture.
+
+```{r indent=indent1, warning=FALSE}
+library(lattice)
+
+trellis.par.set(layout.heights = list(top.padding = 0, bottom.padding = 0))
+trellis.par.set(layout.widths = list(left.padding = 0, right.padding = 0))
+
+p1 <- cloud(X[, 1] ~ X[, 2] * X[, 3], screen = list(z = -60, x = -60), xlab = "X2", ylab = "X3", zlab = "X1", par.settings = list(layout.widths = list(left.padding = 0)))
+p2 <- cloud(X[, 2] ~ X[, 1] * X[, 3], screen = list(z = -60, x = -60), xlab = "X1", ylab = "X3", zlab = "X2")
+p3 <- cloud(X[, 3] ~ X[, 1] * X[, 2], screen = list(z = -60, x = -60), xlab = "X1", ylab = "X2", zlab = "X3")
+
+print(p1, split = c(1, 1, 3, 1), more = TRUE)
+print(p2, split = c(2, 1, 3, 1), more = TRUE)
+print(p3, split = c(3, 1, 3, 1))
+```
+
+
+2. A continuous random variable $X$ has the probability density function \[f_X(t)=\begin{cases} at+bt^2 & 0<t<1\\ 0 & \text{otherwise}
+\end{cases}.\] If $E[X]=1/2$, find
+(a) $a$ and $b$
+$$\int(f_X(t))dt = \int(at+bt^2)dt\\
+     \Rightarrow 1/2at_2 + 1/3bt^3\\
+    \Rightarrow 1/2a + 1/3b = 1$$
+
+$$ E(X) = E(f_X(t)) = \int(t*f_X(t))dt\\
+     \Rightarrow \int(at^2 + bt^3)dt\\
+     \Rightarrow 1/3at^3 + 1/4bt^4\\
+     \Rightarrow 1/3a + 1/4b = 1/2$$
+
+$$ 1/2a + 1/3b = 1\\
+ 1/3a + 1/4b = 1/2\\
+\therefore a = 6, b = -6$$
+(b) $P(X<1/2)$
+$$ P(X<1/2) = \int(6t-6t^2)dt = 3t^2-2t^3 = 0.5$$
+
+(c) $\operatorname{Var}(X)$
+$$ E(X^2) = \int(t^2(6t-6t^2))dt = 3/2t^4-6/5t^5 = 3/10\\
+ \because Var(X) = E(X^2)-(E(X))^2\\
+ \therefore Var(X) = 3/10 - 1/4 = 1/20$$
+
+(d) Generate the density plot of $X$
+
+```{r indent=indent1,message=FALSE}
+# !!! (a), (b), (c) are on paper.
+# (a) a = 6; b = -6
+# (b) P(X<1/2) = 0.5
+# (c) Var(X) = 1/20
+# (d) Generate the density plot of X.
+X <- runif(100)
+d <- curve(6*x - 6*x^2, 0, 1, main = 'density funcion')
+#d <- curve(3*x^2-2*x^3, 0, 1)
+d
+```
+	
+
+3. Consider a nonparametric regression model
+$$
+y_{i}=g\left(x_{i}\right)+\epsilon_{i}, \quad 1 \leq i \leq n,
+$$
+where $y_{i}$'s are observations, $g$ is an unknown function, and $\epsilon_{i}$'s are independent and identically distributed random errors with zero mean and variance $\sigma^{2}$. $n$ is the number of observations. Usually one fits the mean function $g$ first and then estimates the variance $\sigma^{2}$ from residual sum of squares $\hat{\sigma}^{2} = \sum_{i=1}^{n} \hat{\epsilon}_i^2/(n-1)$ where $\hat{\epsilon}_i = y_i - \hat{g}(x_i)$. However this method requires an estimate of the unknown function $g$. 
+Then some researchers proposed some difference-based estimators which does not require the estimation of $g$. Assume that $x$ is univariate and $0 \leq x_{1} \leq \cdots \leq x_{n} \leq 1 .$ Rice (1984) proposed the first order difference-based estimator
+$$
+\hat{\sigma}_{R}^{2}=\frac{1}{2(n-1)} \sum_{i=2}^{n}\left(y_{i}-y_{i-1}\right)^{2}.
+$$
+Gasser, Sroka and Jennen-Steinmetz (1986) proposed the second order difference based estimator and for equidistant design points (i.e. $x_i$ and $x_{i+1}$ have the same distance for all $i=1,2,\dots, n$), $\hat{\sigma}_{G S J}^{2}$ reduces to
+$$
+\hat{\sigma}_{G S J}^{2}=\frac{2}{3(n-2)} \sum_{i=2}^{n-1}\left(\frac{1}{2} y_{i-1}-y_{i}+\frac{1}{2} y_{i+1}\right)^{2} .
+$$    
+Consider the temperature anomaly dataset. Temperature anomalies in degrees Celsius are based on the new version HadCRUT4 land-sea dataset (Morice et al., 2012). We focus on the global median annual temperature anomalies from 1850 to 2019 relative to the 1961-1990 average. 
+We try to build up the model between time and 
+global median temperature $y_i$ and year $x_i$.  
+    
+(a) Use _read.csv_ to read the temperature anomaly dataset. Let $x$ be the vector of years from 1850-2019, $y$ be the vector of corresponding global median annual temperature anomalies, and $n$ be the number of observations
+
+```{r indent=indent1,message=FALSE}
+data <- read.csv('temperature-anomaly.csv')
+#x <- data[data[,'Entity'] == 'Global', 'Year']
+x <- data[data$Entity == 'Global', 'Year']
+y <- data[data$Entity == 'Global', 'Median']
+n <- length(x)
+# show the results.
+head(x)
+head(y)
+print(n)
+```
+
+(b) Display a scatter plot between global median annual temperature anomalies and years with caption "Global median land-sea temperature anomaly relative to the 1961-1990 average temperature", $x-$label years and $y-$label temperature anomalies.
+
+```{r indent=indent1,message=FALSE}
+plot(x, y, xlab = 'years', ylab = 'temperature anomalies', main = 'Global median land-sea temperature anomaly relative to the 1961-1990 average temperature')
+```
+
+(c) Change the years $x$ to a new vector $x$ such that $x_i = i/n$. Compute the first order difference-based estimator. (Note: the change of $x$ or not will not affect the computation of the estimator)
+
+```{r indent=indent1,message=FALSE}
+i <- 1:n
+xi <- i / n
+#xi <- seq_along(x)/n
+estimator_1st <- function(y){
+  1/(2*(n-1)) * sum(diff(y)^2)
+}
+y_est_1st = estimator_1st(y)
+y_est_1st
+```
+
+(d) Compute the second order difference-based estimator.
+
+```{r indent=indent1,message=FALSE}
+estimator_2nd <- function(y){
+  2 * sum((0.5*y[3:n] - y[2:(n-1)] + 0.5*y[1:(n-2)])^2)/(3*(n-2))
+}
+y_est_2nd <- estimator_2nd(y)
+y_est_2nd
+```
+
+    
+ 

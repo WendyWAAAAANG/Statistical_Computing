@@ -1,0 +1,756 @@
+---
+title: 'DS4043: Introduction to Statistical Computing'
+author: "Dr. Zhijian Li"
+#date: "`r Sys.Date()`"
+output:
+  beamer_presentation: default
+  latex_engine: xelatex
+  html_document: default
+  html_notebook:
+    colortheme: default
+  ioslides_presentation:
+    widescreen: true
+    colortheme: default
+    css: ../custom.css
+    fontfamily: mathpazo
+    wide: yes
+  slidy_presentation: default
+---
+
+
+## Probability Density Estimation - Introduction
+
+- Density estimation is a collection of methods for constructing an estimate of a probability density, as a function of an observed sample of data. 
+- For example, a histogram is a type of density estimator. 
+- In this class we restrict attention to nonparametric density estimation. A density estimation problem requires a nonparametric approach if we have no information about the target distribution other than the observed data.
+- For problems that require a nonparametric approach, density estimation provides a flexible and powerful tool for visualization, exploration, and analysis of data.
+
+## Probability Density Estimation - Outline
+
+- Univariate Density Estimation
+- Kernel Density Estimation
+- Bivariate and Multivariate Density Estimation
+
+
+## Univariate Density Estimation
+
+- Histogram
+- Frequency polygon
+- Average shifted histogram 
+
+## Histogram
+
+- Suppose that a random sample $X_1, \dots, X_n$ is observed. To construct a frequency or probability histogram of the sample, the data must be sorted into bins, and the binning operation is determined by the boundaries of the class intervals.
+- Given class intervals of equal width $h$, the histogram density estimate based on a sample size $n$ is
+$$
+\hat{f}(x)=\frac{\nu_{k}}{n h}, \quad t_{k} \leq x<t_{k+1}
+$$
+where $\nu_{k}$ is the number of sample points in the class interval $\left[t_{k}, t_{k+1}\right)$. 
+- If the bin width is exactly 1 , then the density estimate is the relative frequency.
+
+## Histogram - Rule for Bin Width Choice
+
+- Sturges’ Rule
+- Scott’s Normal Reference Rule 
+- Freedman-Diaconis Rule
+
+
+## Histogram - Sturges’ Rule
+
+- Although Sturges’ rule tends to oversmooth the data and either Scott’s rule or FD are generally preferable, Sturges’ rule is the default in many statistical packages.
+
+- The optimal bandwidth $h$ is given by
+$$
+\frac{R}{1+\log _{2} n} \text {, }
+$$
+where $R$ is the sample range. **This rule is designed for data sampled from symmetric, unimodal populations**, but is not a good choice for skewed distributions or distributions with more than one mode.
+
+## Example (Sturges’ Rule)
+
+```{r eval=FALSE}
+n <- 25
+x <- rnorm(n)
+# calc breaks according to Sturges’ Rule
+nclass <- ceiling(1 + log2(n))
+cwidth <- diff(range(x) / nclass)
+breaks <- min(x) + cwidth * 0:nclass
+h.default <- hist(x, freq = FALSE, xlab = "default", 
+                  main = "hist: default")
+z <- qnorm(ppoints(1000)) 
+lines(z, dnorm(z)) 
+h.sturges <- hist(x, breaks = breaks, freq = FALSE, 
+                  main = "hist: Sturges")
+lines(z, dnorm(z))
+```
+
+## Example (Sturges’ Rule)
+
+```{r echo=FALSE, out.width="50%"}
+n <- 25
+x <- rnorm(n)
+# calc breaks according to Sturges’ Rule
+nclass <- ceiling(1 + log2(n))
+cwidth <- diff(range(x) / nclass)
+breaks <- min(x) + cwidth * 0:nclass
+h.default <- hist(x, freq = FALSE, xlab = "default", main = "hist: default")
+z <- qnorm(ppoints(1000)) 
+lines(z, dnorm(z)) 
+h.sturges <- hist(x, breaks = breaks, freq = FALSE, main = "hist: Sturges")
+lines(z, dnorm(z))
+```
+
+## Example (Sturges’ Rule)
+
+```{r}
+print(h.default$breaks)
+print(h.default$counts)
+print(round(h.sturges$breaks, 1))
+print(h.sturges$counts)
+print(cwidth)
+```
+
+
+## Example (Sturges’ Rule)
+
+_nclass.Sturges_ computes the number of classes according to Sturges’ rule.
+```{r}
+x0 <- .1
+b <- which.min(h.default$breaks <= x0) - 1 
+print(c(b, h.default$density[b]))
+b <- which.min(h.sturges$breaks <= x0) - 1 
+print(c(b, h.sturges$density[b]))
+```
+
+## Example (Sturges’ Rule)
+
+```{r echo=FALSE}
+set.seed(17)
+par(mfcol=c(2,2))
+n <- 25
+x <- rnorm(n)
+# calc breaks according to Sturges’ Rule
+nclass <- ceiling(1 + log2(n))
+cwidth <- diff(range(x) / nclass)
+breaks <- min(x) + cwidth * 0:nclass
+h.default <- hist(x, freq = FALSE, xlab = "default", main = "hist: default")
+z <- qnorm(ppoints(1000)) 
+lines(z, dnorm(z)) 
+h.sturges <- hist(x, breaks = breaks, freq = FALSE, main = "hist: Sturges")
+lines(z, dnorm(z))
+
+n <- 1000
+x <- rnorm(n)
+# calc breaks according to Sturges’ Rule
+nclass <- ceiling(1 + log2(n))
+cwidth <- diff(range(x) / nclass)
+breaks <- min(x) + cwidth * 0:nclass
+h.default <- hist(x, freq = FALSE, xlab = "default", main = "hist: default")
+z <- qnorm(ppoints(2000)) 
+lines(z, dnorm(z)) 
+h.sturges <- hist(x, breaks = breaks, freq = FALSE, main = "hist: Sturges")
+lines(z, dnorm(z))
+```
+
+## Scott’s Normal Reference Rule
+
+- To select an optimal (or good) smoothing parameter for density estimation, aims to minimize the squared error in the estimate 
+- Bin width estimator: $\hat{h} \approx 3.49 \hat{\sigma} n^{-1 / 3}$, where $\hat{\sigma}$ is an estimate of the population standard deviation $\sigma$.
+
+## Example (Scott’s Normal Reference Rule)
+
+This example illustrates Scott’s Normal Reference Rule to determine bin width for a histogram of data on the eruptions of the Old Faithful geyser. One version of the data is _faithful_ in the base distribution of R.
+
+```{r}
+library(MASS) #for geyser and truehist
+waiting <- geyser$waiting
+n <- length(waiting)
+# rounding the constant in Scott’s rule
+# and using sample standard deviation to estimate sigma 
+h <- 3.5 * sd(waiting) * n^(-1/3)
+# number of classes is determined by the range and h 
+m <- min(waiting)
+M <- max(waiting)
+nclass <- ceiling((M - m) / h)
+breaks <- m + h * 0:nclass
+```
+
+## Example (Scott’s Normal Reference Rule)
+
+```{r out.width="75%"}
+par(mfrow=c(1,3))
+h.scott<-hist(waiting, breaks=breaks, freq=FALSE,main="") 
+truehist(waiting,nbins="Scott", x0=0,prob=TRUE,col=0) 
+hist(waiting, breaks = "scott", prob=TRUE,density=5)
+```
+
+
+## Freedman-Diaconis Rule
+
+Scott's normal reference rule above is a member of a class of rules $\hat{h}=T n^{-1 / 3}$, where $T$ is a statistic. The Freedman-Diaconis Rule is another member of this class. The FD rule is
+$$
+\hat{h}=2(I Q R) n^{-1 / 3}
+$$
+where IQR denotes the sample interquartile range. Here the estimator $\hat{\sigma}$ is proportional to the IQR. The IQR is less sensitive than sample standard deviation to outliers in the data.
+
+## Frequency Polygon
+
+- The frequency polygon is constructed by computing the density estimate at the midpoint of each class interval, and using linear interpolation for the estimates between consecutive midpoints.
+
+- For normal densities, the optimal frequency polygon bin width is $h_{n}^{f p}=2.15 \sigma n^{-1 / 5}$.
+
+- The normal distribution as a reference distribution will not be optimal if the distribution is not symmetric. A skewness adjustment is the factor
+$$\frac{12^{1 / 5} \sigma}{e^{7 \sigma^{2} / 4}\left(e^{\sigma^{2}}-1\right)^{1 / 2}\left(9 \sigma^{4}+20 \sigma^{2}+12\right)^{1 / 5}}.$$
+
+## Example (Frequency polygon density estimate)
+
+Construct a frequency polygon density estimate of the _geyser_ (MASS) data.
+```{r, eval=FALSE}
+waiting <- geyser$waiting #in MASS
+n <- length(waiting)
+# freq poly bin width using normal ref rule
+h <- 2.15 * sd(waiting) * n^(-1/5)
+
+# calculate the sequence of breaks and histogram 
+br <- pretty(waiting, diff(range(waiting)) / h) 
+brplus <- c(min(br)-h, max(br)+h)
+histg <- hist(waiting, breaks = br, freq = FALSE, 
+              main = "", xlim = brplus)
+```
+
+## Example (Frequency polygon density estimate)
+
+```{r echo=FALSE}
+waiting <- geyser$waiting #in MASS
+n <- length(waiting)
+# freq poly bin width using normal ref rule
+h <- 2.15 * sd(waiting) * n^(-1/5)
+
+# calculate the sequence of breaks and histogram 
+br <- pretty(waiting, diff(range(waiting)) / h) 
+brplus <- c(min(br)-h, max(br+h))
+histg <- hist(waiting, breaks = br, freq = FALSE, 
+              main = "", xlim = brplus)
+```
+
+## Example (Frequency polygon density estimate)
+
+```{r eval=FALSE}
+vx <- histg$mids #density est at vertices of polygon 
+vy <- histg$density
+delta <- diff(vx)[1] # h after pretty is applied
+k <- length(vx)
+vx <- c(vx[1] - delta, vx, vx[k] + delta)
+vy <- c(0, vy, 0)
+# add the polygon to the histogram 
+polygon(vx, vy)
+```
+
+## Example (Frequency polygon density estimate)
+
+```{r echo=FALSE}
+waiting <- geyser$waiting #in MASS
+n <- length(waiting)
+# freq poly bin width using normal ref rule
+h <- 2.15 * sd(waiting) * n^(-1/5)
+# calculate the sequence of breaks and histogram 
+br <- pretty(waiting, diff(range(waiting)) / h) 
+brplus <- c(min(br)-h, max(br+h))
+histg <- hist(waiting, breaks = br, freq = FALSE, main = "", xlim = brplus)
+vx <- histg$mids #density est at vertices of polygon 
+vy <- histg$density
+delta <- diff(vx)[1] # h after pretty is applied
+k <- length(vx)
+vx <- c(vx[1] - delta, vx, vx[k] + delta)
+vy <- c(0, vy, 0)
+# add the polygon to the histogram 
+polygon(vx, vy)
+```
+
+## Example (Frequency polygon density estimate)
+
+Verify $\int_{-\infty}^{\infty} \hat{f}(x) d x=1$
+
+```{r}
+# check estimates by numerical integration
+fpoly <- approxfun(vx, vy)
+print(integrate(fpoly, lower=min(vx), upper=max(vx))) 
+```
+
+## Example (Frequency polygon density estimate)
+
+```{r warning=FALSE, message = FALSE, out.width="80%"}
+library(ggplot2)
+ggplot(geyser, aes(waiting)) + geom_freqpoly(binwidth=h)
+```
+
+## Average Shifted Histogram (ASH)
+
+The ASH estimate of density is
+$$
+  \hat{f}_{A S H}(x)=\frac{1}{m} \sum_{j=1}^{m} \hat{f}_{j}(x),
+$$
+where the class boundaries for estimate $\hat{f}_{j+1}(x)$ are shifted by $h/m$ from the boundaries for $\hat{f}_{j}(x)$.
+  
+## Example (Calculations for ASH estimate)
+  
+Four histogram estimates, each with bin width 1, are computed for a sample size $n = 100$ for standard normal random variable. The bin origins for each of the densities are at 0, 0.25, 0.5 and 0.75 respectively. The bin counts and breaks are shown below.
+
+## Example (Calculations for ASH estimate)
+
+![ASH](Lecture11_ASF.png){ width=80% }
+
+## Example (Calculations for ASH estimate)
+
+![ASH2](Lecture11_ASF2.png)
+
+## Example (ASH density estimate)
+
+- Construct an ASH density estimate of the Old Faithful waiting time data in _geyser$waiting_ (MASS) based on 20 histograms. The bin width is set to $h = 7.27037$.
+(The optimal bin width for the naive ASH estimate of a $\operatorname{Normal}\left(\mu, \sigma^{2}\right)$ density is $h^{*}=2.576 \sigma n^{-1/5}$.)
+
+- In general, if $t_{k}=\max \left\{t_{j}: t_{j}<x \leq t_{j+1}\right\}$, we have
+$$
+\begin{aligned}
+\hat{f}(x) &=\frac{\nu_{k+1-m}+2 \nu_{k+2-m}+\cdots+m \nu_{k}+\cdots+2 \nu_{k+m-2}+\nu_{k+m-1}}{m n h} \\
+&=\frac{1}{n h} \sum_{j=1-m}^{m-1}\left(1-\frac{|j|}{m}\right) \nu_{k+j} .
+\end{aligned}
+$$
+
+## Example (ASH density estimate)
+
+```{r}
+library(MASS)
+waiting <- geyser$waiting 
+n <- length(waiting)
+m <- 20
+a <- min(waiting) - .5
+b <- max(waiting) + .5
+h <- 7.27037
+delta <- h / m
+#get the bin counts on the delta-width mesh. 
+br <- seq(a - delta*m, b + 2*delta*m, delta) 
+histg <- hist(waiting, breaks = br, plot = FALSE) 
+nk <- histg$counts
+K <- abs((1-m):(m-1))
+```
+
+## Example (ASH density estimate)
+
+```{r}
+fhat <- function(x) {
+# locate the leftmost interval containing x 
+i <- max(which(x > br))
+k <- (i - m + 1):(i + m - 1)
+# get the 2m-1 bin counts centered at x 
+vk <- nk[k]
+sum((1 - K / m) * vk) / (n * h) #f.hat
+}
+# density can be computed at any points in range of data 
+z <- as.matrix(seq(a, b + h, .1))
+f.ash <- apply(z, 1, fhat) #density estimates at midpts
+```
+
+## Example (ASH density estimate)
+
+```{r out.width="60%"}
+# plot ASH density estimate over histogram 
+br2 <- seq(a, b + h, h)
+hist(waiting, breaks = br2, freq = FALSE, 
+     main = "", ylim = c(0, max(f.ash)))
+lines(z, f.ash, xlab = "waiting")
+```
+
+## Kernel Density Estimation
+
+- Kernel density estimation generalizes the idea of a histogram density estimate.
+
+- If a histogram with bin width $h$ is constructed from a sample $X_{1}, \ldots$, $X_{n}$, then a density estimate for a point $x$ within the range of the data is
+$$
+\hat{f}_{K}(x)=\frac{1}{n} \sum_{i=1}^{n} \frac{1}{h} K\left(\frac{x-X_{i}}{h}\right)
+$$
+- $K(\cdot)$ is an another symmetric probability density centered at the origin.
+- $h$ is the bandwidth, smoothing parameter
+
+## Kernel Density Estimation
+
+![KN1](Kernel1.png)
+
+## Kernel Density Estimation
+
+![KN2](Kernel2.png){ width=80%}
+
+## Kernel Density Estimation
+
+- Gaussian kernel: $h=1.06 \sigma n^{-1 / 5}$; R function: bw.nrd;
+  This choice of bandwidth is an optimal (IMSE) choice when the distribution is normal.
+- If the true density is not unimodal, we can use $\hat{\sigma}=\min (S, IQR/1.34)$
+- A Better estimate (for Gaussian): $h=0.9 \min (S, IQR / 1.34) n^{-1 / 5}$; $R$ function: bw.nrd0
+- For equivalent kernel rescaling, $h_{2} \approx \frac{\sigma_{K_{1}}}{\sigma_{K_{2}}} h_{1}$.
+
+## Example (Kernel density estimate of Old Faithful waiting time)
+
+In this example we look at the result obtained by the default arguments to _density_.
+The default method applies the Gaussian kernel. For details on the default bandwidth selection see the help topics for _bandwidth_ or _bw.nrd0_.
+
+```{r}
+library(MASS)
+waiting <- geyser$waiting
+n <- length(waiting)
+h1 <- 1.06 * sd(waiting) * n^(-1/5)
+h2 <- .9 * min(c(IQR(waiting)/1.34, 
+                 sd(waiting))) * n^(-1/5)
+```
+
+## Example (Kernel density estimate of Old Faithful waiting time)
+
+```{r out.width="70%"}
+# Try print(density(waiting))
+plot(density(waiting))
+```
+
+## Example (Kernel density estimate of Old Faithful waiting time)
+
+```{r echo=FALSE}
+par(mfrow=c(2,2)) 
+plot(density(waiting))
+plot(density(waiting, bw=2))
+plot(density(waiting, bw=5))
+plot(density(waiting, bw=7))
+```
+
+## Example (Precipitation data)
+
+The dataset _precip_ in R is the average amount of precipitation for 70 United States cities and Puerto Rico. We use the density function to construct kernel density estimates using the default and other choices for bandwidth.
+
+```{r}
+n <- length(precip)
+h1 <- 1.06 * sd(precip) * n^(-1/5)
+h2 <- .9 * min(c(IQR(precip)/1.34, sd(precip))) * n^(-1/5) 
+h0 <- bw.nrd0(precip)
+```
+
+## Example (Precipitation data)
+
+```{r eval=FALSE}
+par(mfrow = c(2, 2))
+plot(density(precip)) #default Gaussian (h0) 
+plot(density(precip, bw = h1)) #Gaussian, bandwidth h1 
+plot(density(precip, bw = h2)) #Gaussian, bandwidth h2 
+plot(density(precip, kernel = "cosine"))
+```
+
+## Example (Precipitation data)
+
+```{r echo=FALSE}
+par(mfrow = c(2, 2))
+plot(density(precip)) #default Gaussian (h0) 
+plot(density(precip, bw = h1)) #Gaussian, bandwidth h1 
+plot(density(precip, bw = h2)) #Gaussian, bandwidth h2 
+plot(density(precip, kernel = "cosine"))
+```
+
+## Example (Precipitation data)
+To estimate the density for new points, use _approx_.
+
+```{r}
+d <- density(precip)
+xnew <- seq(0, 70, 10)
+approx(d$x, d$y, xout = xnew) # see ?approx
+fhat <- approxfun(d$x, d$y)
+fhat(xnew)
+```
+
+
+
+## Example (Exponential density)
+Boundary kernels: near the boundaries of the support set of a density, or discontinuity points, kernel density estimates have larger errors.
+
+```{r eval=FALSE}
+x <- rexp(1000, 1)
+plot(density(x), xlim = c(-1, 6), ylim = c(0, 1), main="")
+abline(v = 0)
+# add the true density to compare
+y <- seq(.001, 6, .01)
+lines(y, dexp(y, 1), lty = 2)
+```
+## Example (Exponential density)
+
+```{r echo=FALSE}
+x <- rexp(1000, 1)
+plot(density(x), xlim = c(-1, 6), ylim = c(0, 1), main="")
+abline(v = 0)
+# add the true density to compare
+y <- seq(.001, 6, .01)
+lines(y, dexp(y, 1), lty = 2)
+```
+
+## Example (Reflection boundary technique)
+
+- A simple fix is to use a reflection boundary technique if the discontinuity occurs at the origin. First add the reflection of the entire sample; that is, append $-x_{1}, \ldots,-x_{n}$ to the data. Then estimate a density $g$ using the $2n$ points, but use $n$ to determine the smoothness parameter. Then $\hat{f}(x)=2 \hat{g}(x)$.
+
+```{r eval=FALSE}
+xx <- c(x, -x)
+g <- density(xx, bw = bw.nrd0(x))
+a <- seq(0, 6, .01)
+
+ghat <- approx(g$x, g$y, xout = a)
+fhat <- 2 * ghat$y # density estimate along a
+
+bw <- paste("Bandwidth = ", round(g$bw, 5))
+plot(a, fhat, type="l", xlim=c(-1, 6), ylim=c(0, 1),
+main = "", xlab = bw, ylab = "Density")
+abline(v = 0)
+```
+## Example (Reflection boundary technique)
+
+```{r eval=FALSE}
+# add the true density to compare
+y <- seq(.001, 6, .01)
+lines(y, dexp(y, 1), lty = 2)
+```
+
+```{r echo=FALSE}
+xx <- c(x, -x)
+g <- density(xx, bw = bw.nrd0(x))
+a <- seq(0, 6, .01)
+
+ghat <- approx(g$x, g$y, xout = a)
+fhat <- 2 * ghat$y # density estimate along a
+
+bw <- paste("Bandwidth = ", round(g$bw, 5))
+plot(a, fhat, type="l", xlim=c(-1, 6), ylim=c(0, 1),
+main = "", xlab = bw, ylab = "Density")
+abline(v = 0)
+# add the true density to compare
+y <- seq(.001, 6, .01)
+lines(y, dexp(y, 1), lty = 2)
+```
+
+## Bivariate and Multivariate Density Estimation
+
+- Bivariate Frequency Polygon: To construct a bivariate density histogram (polygon), it is necessary to
+define two-dimensional bins and count the number of observations in each bin.
+
+```{r}
+bin2d <-
+function(x, breaks1 = "Sturges", breaks2 = "Sturges"){
+# Data matrix x is n by 2
+# breaks1, breaks2: any valid breaks for hist function
+# using same defaults as hist
+histg1 <- hist(x[,1], breaks = breaks1, plot = FALSE)
+histg2 <- hist(x[,2], breaks = breaks2, plot = FALSE)
+brx <- histg1$breaks
+bry <- histg2$breaks
+# bin frequencies
+freq <- table(cut(x[,1], brx), cut(x[,2], bry))
+return(list(call = match.call(), freq = freq,
+breaks1 = brx, breaks2 = bry,
+mids1 = histg1$mids, mids2 = histg2$mids))  }
+```
+
+## Bivariate and Multivariate Density Estimation
+
+```{r}
+bin2d(iris[1:50,1:2])
+```
+
+## Example (Bivariate density polygon)
+
+After binning the bivariate data, the persp function plots the density polygon.
+
+```{r eval=FALSE}
+#generate standard bivariate normal random sample
+n <- 2000; d <- 2
+x <- matrix(rnorm(n*d), n, d)
+
+# compute the frequency table and density estimates
+b <- bin2d(x)
+h1 <- diff(b$breaks1)
+h2 <- diff(b$breaks2)
+
+# matrix h contains the areas of the bins in b
+h <- outer(h1, h2, "*")
+Z <- b$freq / (n * h) # the density estimate
+persp(x=b$mids1, y=b$mids2, z=Z, shade=TRUE,
+xlab="X", ylab="Y", main="",
+theta=45, phi=30, ltheta=60)
+```
+
+## Example (Bivariate density polygon)
+
+```{r echo=FALSE}
+#generate standard bivariate normal random sample
+n <- 2000; d <- 2
+x <- matrix(rnorm(n*d), n, d)
+
+# compute the frequency table and density estimates
+b <- bin2d(x)
+h1 <- diff(b$breaks1)
+h2 <- diff(b$breaks2)
+
+# matrix h contains the areas of the bins in b
+h <- outer(h1, h2, "*")
+Z <- b$freq / (n * h) # the density estimate
+persp(x=b$mids1, y=b$mids2, z=Z, shade=TRUE,
+xlab="X", ylab="Y", main="",
+theta=45, phi=30, ltheta=60)
+```
+
+## Bivariate ASH
+
+The bivariate ASH estimate of the joint density $f(x, y)$ is
+$$
+\hat{f}_{A S H}(x, y)=\frac{1}{m_{1} m_{2}} \sum_{i=1}^{m_{1}} \sum_{j=1}^{m_{2}} \hat{f}_{i j}(x, y)
+$$
+The bin weights are given by
+$$
+w_{i j}=\left(1-\frac{|i|}{m_{1}}\right)\left(1-\frac{|j|}{m_{2}}\right)
+$$
+where $i=1-m_{1}, \ldots, m_{1}-1, j=1-m_{2}, \ldots, m_{2}-1$.
+
+## Example (Bivariate ASH density estimate)
+
+This example computes a bivariate ASH estimate of a bivariate normal
+sample, using Scott’s routines in the _ash_ package. The function _ash2_ returns
+a list containing (among other things) the coordinates of the bin centers and
+the density estimates, labeled $x, y, z$. The multivariate normal data is
+generated by the _mvrnorm_ (MASS) function.
+
+```{r}
+#install.packages("ash")
+library(ash) # for bivariate ASH density est.
+# generate N_2(0,Sigma) data
+n <- 2000
+d <- 2
+nbin <- c(30, 30) # number of bins
+m <- c(5, 5) # smoothing parameters
+```
+
+## Example (Bivariate ASH density estimate)
+
+```{r}
+# First example with positive correlation
+Sigma <- matrix(c(1, .9, .9, 1), 2, 2)
+set.seed(345)
+x <- MASS::mvrnorm(n, c(0, 0), Sigma)
+#install.packages("ash")
+library(ash)
+b <- bin2(x, nbin = nbin)
+# kopt is the kernel type, here triangular
+est <- ash2(b, m = m, kopt = c(1,0))
+```
+
+## Example (Bivariate ASH density estimate)
+
+```{r out.width="80%"}
+persp(x = est$x, y = est$y, z = est$z, shade=TRUE, 
+  xlab = "X", ylab = "Y",zlab = "", main="", 
+  theta = 30, phi = 45, ltheta = 20, box = FALSE)
+```
+
+## Multidimensional Kernel Methods
+
+The multivariate kernel density estimator of $f(X)$ with smoothing parameter $\mathbf{h}=\left(\mathrm{h}_{1}, \ldots, \mathrm{h}_{\mathrm{d}}\right)^{\top}$ is
+$$
+\hat{f}_{K}(x)=\frac{1}{n h_{1} \cdots h_{\mathrm{d}}} \sum_{i=1}^{n} K\left(\frac{x-X_{i}}{h}\right),
+$$
+where $\boldsymbol{X}_{i}=\left(X_{i 1}, \ldots, X_{i d}\right)^{\top}$, and $K(X)$ will be a symmetric and unimodal density on $\mathrm{R}^{\mathrm{d}}$. If $K(X)$ is from an uncorrelated multivariate normal distribution, the optimal bandwidth are
+$$
+h_{j}^{*}=\left(\frac{4}{d+2}\right)^{1 /(d+4)} \times \sigma_{j} n^{-1 /(d+4)} .
+$$
+
+## Example (Product kernel estimate of a bivariate normal mixture)
+
+This example plots the density estimate for a bivariate normal location mixture using _kde2d_ (MASS). The mixture has three components with different mean vectors and identical variance $\Sigma=I_{2}$. The mean vectors are
+$$
+\mu_{1}=\left[\begin{array}{l}
+0 \\
+1
+\end{array}\right], \quad \mu_{2}=\left[\begin{array}{l}
+4 \\
+0
+\end{array}\right], \quad \mu_{3}=\left[\begin{array}{r}
+3 \\
+-1
+\end{array}\right]
+$$
+and the mixing probabilities are $p=(0.2,0.3,0.5)$. The code to generate the mixture data and plots follows.
+
+## Example (Product kernel estimate of a bivariate normal mixture)
+
+```{r}
+library(MASS) #for mvrnorm, kde2d, ucv functions
+#generate the normal mixture data
+n <- 2000
+p <- c(.2, .3, .5)
+mu <- matrix(c(0, 1, 4, 0, 3, -1), 3, 2)
+Sigma <- diag(2)
+i <- sample(1:3, replace = TRUE, prob = p, size = n)
+k <- table(i)
+x1 <- mvrnorm(k[1], mu = mu[1,], Sigma)
+x2 <- mvrnorm(k[2], mu = mu[2,], Sigma)
+x3 <- mvrnorm(k[3], mu = mu[3,], Sigma)
+X <- rbind(x1, x2, x3) #the mixture data
+x <- X[,1]
+y <- X[,2]
+```
+
+## Example (Product kernel estimate of a bivariate normal mixture)
+
+```{r out.width="50%"}
+print(c(bandwidth.nrd(x), bandwidth.nrd(y)))
+
+# accepting the default normal reference bandwidth
+fhat <- kde2d(x, y)
+contour(fhat)
+```
+
+## Example (Product kernel estimate of a bivariate normal mixture)
+
+```{r out.width="70%"}
+persp(fhat, phi = 30, theta = 20, d = 5, xlab = "x")
+```
+
+## Example (Product kernel estimate of a bivariate normal mixture)
+
+```{r out.width="50%"}
+# select bandwidth by unbiased cross-validation
+h = c(ucv(x), ucv(y))
+fhat <- kde2d(x, y, h = h)
+par(mfrow = c(1,2))
+contour(fhat)
+persp(fhat, phi = 30, theta = 20, d = 5, xlab = "x")
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

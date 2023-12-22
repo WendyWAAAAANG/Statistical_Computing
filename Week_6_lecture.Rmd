@@ -1,0 +1,342 @@
+---
+title: 'DS4043: Introduction to Statistical Computing'
+author: "Dr. Zhijian Li"
+#date: "`r Sys.Date()`"
+output:
+  beamer_presentation: default
+  latex_engine: xelatex
+  html_document: default
+  html_notebook:
+    colortheme: default
+  ioslides_presentation:
+    widescreen: true
+    colortheme: default
+    css: ../custom.css
+    fontfamily: mathpazo
+    wide: yes
+  slidy_presentation: default
+---
+
+
+## Monte Carlo Methods in Integration and variance reduction
+
+- Monte Carlo Integration
+
+- Variance Reduction
+
+- Importance Sampling
+
+## Introduction
+
+- To simulate random variables from specified probability distributions
+- A simple case: to draw an observation at random from a finite population, a method of generating random observations from the discrete uniform distribution is required.
+- A suitable generator of uniform pseudo-random numbers is essential.
+- The uniform pseudo-random number generator in $R$ is 'runif'.
+- A vector of $n$ random numbers between 0 and 1 , use runif(n).
+- To generate $n$ Uniform $(a, b)$ numbers, use runif $(n, a, b)$
+- To generate an $n$ by $m$ matrix between 0 and 1, use matrix(runif($n*m$), nrow=n, ncol=m) or 
+matrix(runif($n * m$), n, m).
+
+## Monte Carlo Integration
+
+- If $X$ is a random variable with density $f(x)$, then the expectation of $Y=g(X)$ is
+$$
+E[g(X)]=\int_{-\infty}^{\infty} g(x) f(x) d x
+$$
+If a random sample is available for $X$, the sample mean $\bar{Y}$ is an unbiased estimator of $E[g(X)]$.
+
+## Monte Carlo Integration
+
+- Consider estimating $\theta=\int_{0}^{1} g(x) d x$. If $X_{1}, \ldots, X_{m}$ are iid Uniform $(0,1)$ sample, then
+$$
+\hat{\theta}=\frac{1}{m} \sum_{i=1}^{m} g\left(X_{i}\right)
+$$
+which converges to $E[g(X)]=\theta$ with probability 1 by the Strong Law of Large Numbers.
+
+## Example
+
+- Compute $\theta=\int_{0}^{1} e^{-x} dx$ using Monte Carlo method and compare the exact value.
+
+```{r}
+m <- 10000
+x <- runif(m)
+theta.hat <- mean(exp(-x)) 
+print(theta.hat) # the estimated value
+print(1 - exp(-1)) # true value
+```
+
+
+## Monte Carlo Integration
+
+- To compute $\int_{a}^{b} g(x) dx$, let $y=(x-a) /(b-a)$ and $dy=dx /(b-a)$, i.e.
+$$
+\int_{a}^{b} g(x) d x=\int_{0}^{1} g(y(b-a)+a)(b-a) d y
+$$
+- Alternatively, we could use $X \sim U(a, b)$, i.e.
+$$
+\int_{a}^{b} g(x) d x=(b-a) \int_{a}^{b} g(x) \frac{1}{b-a} d x = (b-a)E[g(x)]
+$$
+
+## Example
+
+- Compute Monte Carlo estimate of $\theta=\int_{2}^{4} e^{-x} d x$ and compare the exact value by evaluating the integral.
+
+```{r}
+m <- 10000; x <- runif(m, min=2, max=4)
+theta.hat <- mean(exp(-x)) * 2 
+print(theta.hat)          # Estimated value
+print(exp(-2) - exp(-4))  # Ture value
+```
+
+
+## Monte Carlo Integration
+
+- Summarize Monte Carlo estimate of $\theta=\int_{a}^{b} g(x) d x$ :
+  - Generate $X_{1}, \ldots, X_{m}$ i.i.d. from $U(a, b)$
+  - Compute $\overline{g(X)}=\frac{1}{m} \sum_{i=1}^{m} g\left(X_{i}\right)$
+  - $\hat{\theta}=(b-a) \overline{g(X)}$
+
+## Example - Normal Distribution
+
+- Compute Monte Carlo estimate of the standard normal cdf
+$$
+\Phi(x)=\int_{-\infty}^{x} \frac{1}{\sqrt{2 \pi}} e^{-\frac{t^{2}}{2}} d t
+$$
+- We can't directly apply the previous method because there is an infinite integral
+- Assume $x >0$, and consider $U(0,x)$
+$$
+\theta=\int_{0}^{x}  e^{-\frac{t^{2}}{2}} d t
+$$
+and then $\Phi(x) = \frac{\theta}{\sqrt{2 \pi}}$.
+- What if we prefer an algorithm that always samples from Uniform(0,1)?
+
+## Example - Normal Distribution
+
+This can be accomplished by a change of variables. Making the substitution $y=t / x$, we have $d t=x d y$ and
+$$
+\theta=\int_{0}^{1} x e^{-(x y)^{2} / 2} d y
+$$
+Thus, $\theta=E_{Y}\left[x e^{-(x Y)^{2} / 2}\right]$, where the random variable $Y$ has the Uniform(0,1) distribution. Generate i.i.d. Uniform(0,1) random numbers $u_{1}, \ldots, u_{m}$, and compute
+$$
+\hat{\theta}=\overline{g_{m}(u)}=\frac{1}{m} \sum_{i=1}^{m} x e^{-\left(xu_{i} \right)^{2} / 2}
+$$
+The sample mean $\hat{\theta}$ converges to $E[\hat{\theta}]=\theta$ as $m \rightarrow \infty$. If $x>0$, the estimate of $\Phi(x)$ is $0.5+\hat{\theta} / \sqrt{2 \pi}$. If $x<0$ compute $\Phi(x)=1-\Phi(-x)$.
+
+## Example - Normal Distribution
+
+```{r}
+x <- seq(.1, 2.5, length = 8); m <- 10000
+u <- runif(m)
+cdf <- numeric(length(x)) 
+for (i in 1:length(x)) {
+g <- x[i] * exp(-(u * x[i])^2 / 2) 
+cdf[i] <- mean(g) / sqrt(2 * pi) + 0.5 }
+Phi <- pnorm(x) 
+print(round(rbind(x, cdf, Phi), 3))
+```
+
+  
+## Example - An Alternative Method
+  
+- Let $I(\cdot)$ be the indicator function and $Z \sim N(0,1)$. Then we have $E[I(Z$ $\leq \mathrm{x})]=\mathrm{P}(\mathrm{Z} \leq \mathrm{x})=\Phi(x)$. Then the sample mean
+$$
+\widehat{\Phi(x)}=\frac{1}{m} \sum_{i=1}^{m} I\left(z_{i} \leq x\right)
+$$
+converges to $\Phi(x)$ with probability one.
+
+## Example - An Alternative Method
+
+```{r}
+x <- seq(.1, 2.5, length = 8); m <- 10000
+z <- rnorm(m)
+dim(x) <- length(x)
+p <- apply(x, MARGIN = 1,
+           FUN = function(x, z) {mean(z < x)}, z = z)
+Phi <- pnorm(x)
+print(round(rbind(x, p, Phi), 3))
+```
+
+## Monte Carlo Integration - Summary
+
+- Summarize:
+- If $f(x)$ is a pdf of random variable $X$ and $A$ is the support of $f(x)$.
+- The integral $\theta=\int_{A} g(x) f(x) d x$ can be estimated by the sample mean of $\hat{\theta}=\frac{1}{m} \sum_{i=1}^{m} g\left(x_{i}\right)$, given the random sample $x_{1}, \ldots, x_{m}$.
+- $\hat{\theta}$ converge to $\theta$ as $m \rightarrow \infty$ with probability one.
+
+## Monte Carlo Integration - Variance
+
+- $\operatorname{Var}(\hat{\theta})=\frac{\sigma^{2}}{m}$, where $\sigma^{2}=\operatorname{Var}(g(x))$
+- $\hat{\sigma}^{2}=\frac{1}{m} \sum_{i=1}^{m}\left[g\left(x_{i}\right)-\overline{g\left(x_{i}\right)}\right]^{2}$, where $x_{1}, \ldots, x_{m}$ is a random sample.
+- Central Limit Theorem: $\frac{\widehat{\theta}-E(\widehat{\theta})}{\sqrt{\operatorname{Var}(\widehat{\theta})}}$ converges to $N(0,1)$ as $m \rightarrow \infty$.
+
+## Example - Confidence Interval
+
+Estimate the variance of the estimator in the previous example and construct approximate 95% confidence intervals for the estimate of $\Phi(2)$.
+
+```{r}
+x <- 2
+m <- 10000; z <- rnorm(m)
+g <- (z < x) #the indicator function
+v <- mean((g - mean(g))^2) / m
+cdf <- mean(g)
+c(cdf, v)
+c(cdf - 1.96 * sqrt(v), cdf + 1.96 * sqrt(v))
+```
+
+
+## Summary
+
+- Recall: let $x \sim U(a,b)$, 
+$$
+\theta=\int_{a}^{b} g(x) d x=(b-a) \int_{a}^{b} g(x) \frac{1}{b-a} d x=(b-a) \mathrm{E}[\mathrm{g}(x)]
+$$
+  - Generate $X_{1}, \ldots, X_{m}$ i.i.d. from Uniform(a,b)
+  - Compute $\overline{g(X)}=\frac{1}{m} \sum_{i=1}^{m} g\left(X_{i}\right)$, 
+    $\hat{\theta}=(b-a) \overline{g(X)}$
+- $\mathrm{E}(\overline{g(X)})=\theta /(b-a)$, and $\operatorname{Var}(\overline{g(X)})=\frac{1}{m} \operatorname{Var}(g(X))$
+- $\mathrm{E}[\hat{\theta}]=\theta$ and $\operatorname{Var}(\hat{\theta})=\frac{(b-a)^{2}}{m} \operatorname{Var}(\mathrm{g}(X))$
+
+## Summary
+
+- The "hit-or-miss" method to estimate $F(x)=\int_{-\infty}^{x} f(t) dt$, where $f(x)$ is the pdf of $X$ :
+  - Generate $X_{1}, \ldots, X_{m}$ i.i.d. based on $f(x)$
+  - For each $X_{i}$ compute $$g\left(X_{i}\right)=I\left(X_{i} \leq x\right)= \begin{cases}1, & X_{i} \leq x \\ 0, & X_{i}>x\end{cases}$$
+  - Compute $\widehat{F(x)}=\overline{g(X)}=\frac{1}{m} \sum_{i=1}^{m} I\left(X_{i} \leq x\right)$
+
+## Variance of $\widehat{F(x)}$ 
+
+- Considering $g\left(x_{i}\right)$ is a Bernoulli trial, with event probability of $F(x)$. The variance of $\overline{F(x)}$ can be estimated by
+$$
+\widehat{F(x)}(1-\widehat{F(x)}) / \mathrm{m}
+$$
+The maximum variance occurs when $F(x)=1 / 2$, so a conservative estimate of the variance of $F(x)$ is $1 /(4 m)$.
+
+## Efficiency
+
+- If $\hat{\theta}_{1}$ and $\hat{\theta}_{2}$ are two estimators for $\theta$, then $\hat{\theta}_{1}$ is more efficient than $\hat{\theta}_{2}$ when
+$$
+\frac{\operatorname{Var}\left(\hat{\theta}_{1}\right)}{\operatorname{Var}\left(\hat{\theta}_{2}\right)}<1
+$$
+- Note that variance can alway be reduced by increasing the number of replicates, so computational efficiency is also relevant.
+
+## Variance Reduction
+
+- The Monte Carlo (MC) estimator $\hat{\theta}=\frac{1}{m} \sum_{i=1}^{m} g\left(X_{i}\right)$ is unbiased for $\theta=E[g(X)]$
+- The variance of the MC estimator is $\operatorname{Var}(\hat{\theta})=\operatorname{Var}[g(X)] / m$.
+- Increasing the number of replicates $m$ reduces the variance of the MC estimator, but maybe a small improvement.
+- If standard error should be at most $e$ and $\operatorname{Var}(g(\mathrm{X}))=\sigma^{2}$, then $\mathrm{m} \geq$ $\left[\sigma^{2} / \mathrm{e}^{2}\right]$ replicates are required.
+
+## Importance Sampling
+
+We view the integration problem as an expected value problem.
+
+- It seems reasonable to consider other weight functions (other densities) than uniform.
+- One limitation of uniform weight is that it does not apply to unbounded intervals.
+- Another drawback is that it can be inefficient to draw samples uniformly across the interval if the function g(x) is not very uniform.
+
+## Importance Sampling
+
+- Suppose $X$ is a random variable with pdf $f(x)$, such that $f(x)>0$ on the set $\{x: g(x)>0\}$. Let $Y$ be the random variable $g(X) / f(X)$. Then
+$$
+\theta = \int g(x) dx=\int \frac{g(x)}{f(x)} f(x) dx=E[Y]
+$$
+estimated by simple Monte Carlo integration. That is, compute the average
+$$
+\hat{\theta} = \frac{1}{m} \sum_{i=1}^{m} Y_{i}=\frac{1}{m} \sum_{i=1}^{m} \frac{g\left(X_{i}\right)}{f\left(X_{i}\right)}
+$$
+where the random variables $X_{1}, \ldots, X_{m}$ are generated from the distribution with density $f(x)$. The density $f(x)$ is called the **_importance function_**.
+
+
+## Importance Sampling
+
+- The variance of the estimator based on $Y=g(X)/f(X)$ is $\operatorname{Var}(Y) / m$.
+- So the variance of $Y$ should be small if $Y$ is nearly constant.
+- So the density $f(\cdot)$ should be "close" to $g(x)$.
+- Also, the variable with density $f(\cdot)$ should be reasonably easy to simulate.
+
+## Importance Sampling
+
+- We expect a more precise estimate if the simulated sample is not uniformly distributed.
+- In the naive Monte Carlo approach, estimates in the tails of the distribution are less precise.
+- In this case, the average must be a weighted average rather than the unweighted sample mean, to correct for this bias. This method is called importance sampling.
+- The advantage of importance sampling is that the important density f(x) can be chosen so that variance of the Monte Carlo estimator is reduced.
+
+## Importance Sampling
+
+- Suppose both $f(x)$ and $\phi(x)$ are the pdf's support on set $A$ and, i.e.
+$$
+\theta=\int_{A} g(x) f(x) dx=\int_{A} g(x) \frac{f(x)}{\phi(x)} \phi(x) dx
+$$
+Then an estimator of $\theta=E_{\phi}\left[g(x) \frac{f(x)}{\phi(x)}\right]$ is
+$$
+\hat{\theta}=\frac{1}{m} \sum_{i=1}^{m} g\left(X_{i}\right) \frac{f\left(X_{i}\right)}{\phi\left(X_{i}\right)}
+$$
+where $X_{1}, \ldots, X_{m}$ is a random sample based on pdf $\phi(x)$, which called the *envelope* or the *importance sampling function*. One should choose $\phi(x)$ easy to simulate $x$, finite variance and $\phi(x) \cong |g(x)|f(x)$.
+
+## Example
+
+- To estimate $\int_{0}^{1} \frac{e^{-x}}{1+x^{2}} dx$ by comparing the following importance sampling functions:
+$$
+\begin{gathered}
+f_{0}(x)=1, \quad 0<x<1 \\
+f_{1}(x)=e^{-x}, \quad 0<x<\infty \\
+f_{2}(x)=\left(1+x^{2}\right)^{-1} / \pi, \quad-\infty<x<\infty \\
+f_{3}(x)=e^{-x} /\left(1-e^{-1}\right), \quad 0<x<1 \\
+f_{4}(x)=4\left(1+x^{2}\right)^{-1} / \pi, \quad 0<x<1
+\end{gathered}
+$$
+Here we have $g(x)=\frac{e^{-x}}{1+x^{2}}$, for $0<x<1$.
+
+## Example - Comparing importance functions
+
+```{r}
+m <- 10000
+theta.hat <- se <- numeric(5) 
+g <- function(x) {
+exp(-x)/(1+x^2) * (x > 0) * (x < 1) }
+```
+
+```{r}
+x <- runif(m) #using f0 
+fg <- g(x)
+theta.hat[1] <- mean(fg) 
+se[1] <- sd(fg)
+```
+
+## Example - Comparing importance functions
+
+```{r}
+x <- rexp(m, 1) #using f1 
+fg <- g(x) / exp(-x) 
+theta.hat[2] <- mean(fg) 
+se[2] <- sd(fg)
+```
+
+```{r}
+x <- rcauchy(m) #using f2
+i <- c(which(x > 1), which(x < 0))
+x[i] <- 2 #to catch overflow errors in g(x)
+fg <- g(x) / dcauchy(x)
+theta.hat[3] <- mean(fg)
+se[3] <- sd(fg)
+```
+
+## Example - Comparing importance functions
+
+```{r}
+u <- runif(m) #f3, inverse transform method 
+x <- - log(1 - u * (1 - exp(-1)))
+fg <- g(x) / (exp(-x) / (1 - exp(-1))) 
+theta.hat[4] <- mean(fg)
+se[4] <- sd(fg)
+```
+
+```{r}
+u <- runif(m) #f4, inverse transform method 
+x <- tan(pi * u / 4)
+fg <- g(x) / (4 / ((1 + x^2) * pi))
+theta.hat[5] <- mean(fg)
+se[5] <- sd(fg)
+round(rbind(theta.hat, se),3)
+```
+

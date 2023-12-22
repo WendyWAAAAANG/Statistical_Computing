@@ -1,0 +1,406 @@
+---
+title: "SC_Project"
+author: "Ruoxin WANG"
+date: "2023-05-11"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#Simulation_Report
+
+## 1 Generate MC Sample and Estimate Mean and Variance
+
+### 1.1 Methodology
+
+For simulation process, we estimate the mean and variance of age of abalone, using both the sample mean and maximum likelihood methods with the Monte Carol simulation. And calculate the bias and mean square error for different size branch. Firstly, we set two different sizes of branches —— small and large branch. The number of samples size is 50 and 1000 respectively. For each size of branch, we do 1000 sampling. Follow is our simulation process:
+
+  1. Calculate the mean μ and standard deviation σ of whole data. Based on our assumption that out data follows Gamma distribution with $shape = 10.111$ and $rate = 1.017$, we generate sample data using $rgamma(n, shape = 10.111, rate = 1.017)$. (Note: n represents sample size)
+
+  2. Repeat the first step on 1000 times to get a set of sample. Each row represents a sample, and each sample contains 50 data. So, its size is $1000 × n$.
+
+  3. Estimate the mean and variance of each sample, so we can get a $2 × 100$ matrix, first row represents all estimated mean $\hat{\mu}$, and the second row represents all estimated variance $\hat{\sigma}$.
+
+  4. Finally, calculate the mean of all $\hat{\mu}$ in first row to estimate the population mean. Similarly, calculate the mean of all $\hat{\sigma}$ in second row to estimate the population variance.
+
+  As for estimation of the mean and variance of each sample to get $\hat{\mu}$ and $\hat{\sigma}$, we using sample mean method and maximum likelihood function respectively.
+
+### 1.2 Results
+
+  Here is the results of estimation using two method:
+  
+  1. Estimation of Sample Mean Method
+  
+  ![Estimation of Sample Mean Method](sm.png)
+  
+  2. Estimation of Maximum Likelihood Method
+  
+  ![Estimation of Maximum Likelihood Method](mle.png)
+  
+<!--  Here is the results of estimation using sample mean method:
+    | Term        | Mean                  | Variance             |
+    | :---------: | :-------------------: | :------------------: |
+    | raw data    | 9.933684              | 10.39527             |
+    | MC Sample   | 9.958011  9.941129    | 9.89044     9.783901 |
+    | bias        | 0.0243262 0.007444288 | 0.5048259  0.6113646 |
+    | MSE         | 0.1931735 0.009324349 | 5.20951     0.636083 |
+    
+  Here is the results of estimation using maximum likelihood function:
+    | Term        | Mean                  | Variance             |
+    | ----------- | --------------------- | -------------------- |
+    | raw data    | 9.933684              | 10.39527             |
+    | MC Sample   | 9.932067  9.939671    | 9.64192     9.745032 |
+    | bias        | -0.001617  0.005987   | 0.7533456   0.650234 |
+    | MSE         | 0.1880846 0.009687934 | 0.0096879  0.6650339 | -->
+    
+
+
+## 2 Estimate Parameters Using MLE
+
+### 2.1 Methodology
+
+The density of Gamma$\left(r, \lambda \right)$ is 
+$$
+f(x) = \frac{\lambda^r }{\Gamma(r)} x^{r-1}e^{-\lambda x}, \quad x \geq 0 
+$$
+The likelihood function is
+$$
+L(r, \lambda)=\frac{\lambda^{n r}}{\Gamma(r)^{n}} \prod_{i=1}^{n} x_{i}^{r-1} \exp \left(-\lambda \sum_{i=1}^{n} x_{i}\right), \quad x_{i} \geq 0
+$$
+and the log-likelihood function is
+$$
+\ell(r, \lambda)=n r \log \lambda-n \log \Gamma(r)+(r-1) \sum_{i=1}^{n} \log x_{i}-\lambda \sum_{i=1}^{n} x_{i}
+$$
+Find the simultaneous solutions $(r, \lambda)$ to
+$$
+\begin{aligned}
+\frac{\partial}{\partial \lambda} \ell(r, \lambda) &=\frac{n r}{\lambda}-\sum_{i=1}^{n} x_{i}=0 ; \\
+\frac{\partial}{\partial r} \ell(r, \lambda) &=n \log \lambda-n \frac{\Gamma^{\prime}(r)}{\Gamma(r)}+\sum_{i=1}^{n} \log x_{i}=0 .
+\end{aligned}
+$$
+We have
+$$
+\begin{gathered}
+\hat{\lambda}=\hat{r} / \bar{x} \\
+n \log \frac{\hat{r}}{\bar{x}}+\sum_{i=1}^{n} \log x_{i}-n \frac{\Gamma^{\prime}(\hat{r})}{\Gamma(\hat{r})}=0
+\end{gathered}
+$$
+Thus, the MLE $(\hat{r}, \hat{\lambda})$ is the simultaneous solution $(r, \lambda)$ of
+$$
+\log \lambda+\frac{1}{n} \sum_{i=1}^{n} \log x_{i}=\psi(\lambda \bar{x}) ; \quad \bar{x}=\frac{r}{\lambda}
+$$
+where $\psi(t)=\frac{d}{d t} \log \Gamma(t)=\Gamma^{\prime}(t) / \Gamma(t)$ (the _digamma_ function in $\mathrm{R}$ ). A numerical solution is easily obtained using the _uniroot_ function.
+
+  In the following simulation experiment, random samples of size $n = 50$ and $n = 1000$ are generated from a Gamma$(r=10.111, \lambda = 1.107)$ distribution, and the parameters are estimated by optimizing the likelihood equations using _uniroot_. The sampling and estimation is repeated $m=20000$ times.
+
+
+### 2.2 Results
+
+  Here is the result of two branches of MLE estimation:
+  
+  ![MLE Estimation](mle_para.png)
+  
+<!--    | sample size | shape ($\hat{r}$) | rate ($\hat{\lambda}$) |
+    | ----------- | ----------------- | ---------------------- |
+    |   n = 50    | 10.71301          | 1.07955                |
+    |   n = 1000  | 10.137183         | 1.019751               | -->
+
+
+  And we can check the estimation of parameters' histogram.
+  
+  1. distribution of $\hat{\r}$ when $n = 50$
+  
+  ![\hat{\r}, n = 50](50shape.png)
+  
+  2. distribution of $\hat{\lambda}$ when $n = 50$
+  
+  ![\hat{\lambda}, n = 50](50rate.png)
+  
+  3. distribution of $\hat{\r}$ when $n = 1000$
+  
+  ![\hat{\r}, n = 1000](1000shape.png)
+  
+  4. distribution of $\hat{\lambda}$ when $n = 1000$\
+  
+  ![\hat{\lambda}, n = 1000](1000rate.png)
+
+# Conclusion
+
+In this project, we use kernel estimation, sample estimation, maximum likelihood estimation and Monte Carlo simulation to analyze the age of abalone. In addition, we also establish regression model to predict abalone’s age according to several variables. Finally select the best models and test their stability with jackknife and bootstrap methods.
+Generally, the age of abalone follows gamma distribution. Based on this assumption, we conduct monte Carlo simulation on the age of abalone. The obtained mean and variance are very close to the population mean and variance. And we also use MLE method to estimate the parameters of gamma distribution. According to result of R square, it has shown that our model has a good performance on this abalone dataset.
+
+
+#Simulation_Code
+
+## Import dataset.
+
+```{r}
+# import data.
+data <- read.csv("data.csv", header = TRUE)
+```
+
+```{r}
+# store y into age.
+age <- data$rings
+head(age, 8)
+```
+
+```{r}
+# calculate mean and var of y.
+y_mean <- mean(age)
+y_var <- var(age)
+y_mean
+y_var
+```
+
+## Generate the Monte Carlo (MC) sample.
+Assume that data follows Gamma distribution where $shape = 10.111$, $rate = 1.017$
+```{r}
+# Generate the Monte Carlo(MC) sample.
+n <- 1000
+m1 <- 50
+m2 <- 1000
+
+for(j in 1:n){
+  # generate samples.
+  sm_small <- rgamma(m1, shape = 10.111, rate = 1.017)
+}
+
+for(j in 1:n){
+  # generate samples.
+  sm_large <- rgamma(m2, shape = 10.111, rate = 1.017)
+}
+
+cat("MC sample small\n", head(sm_small, 15), '\n\n')
+cat("MC sample large\n", head(sm_large, 15), '\n\n')
+```
+
+## Estimate the mean and variance using both the sample and ML methods for the MC sample
+
+1. estimate the mean and variance of samples, bias and mse using MC sample.
+```{r}
+# Generate the Monte Carlo(MC) sample.
+# sample mean method.
+mc_sm_mean <- numeric(2)
+mc_sm_var <- numeric(2)
+bias_sm_mean <- numeric(2)
+bias_sm_var <- numeric(2)
+mse_sm_mean <- numeric(2)
+mse_sm_var <- numeric(2)
+sm_mean <- numeric(2)
+sm_var <- numeric(2)
+
+n <- 1000
+m1 <- 50
+m2 <- 1000
+k = 0
+for(i in c(m1, m2)){
+  for(j in 1:n){
+    # generate samples.
+    sm <- rgamma(i, shape = 10.111, rate = 1.017)
+    sm_mean[j] <- mean(sm)
+    sm_var[j] <- sum((sm-sm_mean[j])^2)/(i-1)
+  }
+  k = k + 1
+  mc_sm_mean[k] <- mean(sm_mean)
+  mc_sm_var[k] <- mean(sm_var)
+  bias_sm_mean[k] <- mc_sm_mean[k] - y_mean
+  bias_sm_var[k] <- mc_sm_var[k] - y_var
+  mse_sm_mean[k] <- var(sm_mean) + bias_sm_mean[k]^2
+  mse_sm_var[k] <- var(sm_var) + bias_sm_var[k]^2
+}
+
+cat("mean of MC sample\n", mc_sm_mean, '\n\n')
+cat("variance of MC sample\n", mc_sm_var, '\n\n')
+cat("bias's mean of MC sample\n", bias_sm_mean, '\n\n')
+cat("bias's variance of MC sample\n", bias_sm_var, '\n\n')
+cat("mse's mean of MC sample\n", mse_sm_mean, '\n\n')
+cat("mse's mean of MC sample\n", mse_sm_var, '\n\n')
+
+```
+2. estimate the mean and variance of samples, bias and mse using ML method.
+
+```{r}
+# MLE.
+mle_var_func <- function(x) {
+  n <- length(x)
+  mu <- mean(x)
+  s2 <- sum((x - mu)^2) / (n - 1)
+  return(s2)
+}
+
+mc_mle_mean <- numeric(2)
+mc_mle_var <- numeric(2)
+bias_mle_mean <- numeric(2)
+bias_mle_var <- numeric(2)
+mse_mle_mean <- numeric(2)
+mse_mle_var <- numeric(2)
+mle_mean <- numeric(2)
+mle_var <- numeric(2)
+
+n <- 1000
+m1 <- 50
+m2 <- 1000
+k = 1
+for(i in c(m1, m2)){
+  for(j in 1:n){
+    # generate samples.
+    #u <- runif(n)
+    #mle <- (-log(1 - u) / rate)^(1 / shape)
+    mle <- rgamma(i, shape = 10.111, rate = 1.017)
+    mle_mean[j] <- mean(mle)
+    #mle_var[j] <- mle_var_func(x)
+    mle_var[j] <- sum((mle-mle_mean[j])^2)/i
+  }
+  mc_mle_mean[k] <- mean(mle_mean)
+  mc_mle_var[k] <- mean(mle_var)
+  bias_mle_mean[k] <- mc_mle_mean[k] - y_mean
+  bias_mle_var[k] <- mc_mle_var[k] - y_var
+  mse_mle_mean[k] <- var(mle_mean) + bias_mle_mean[k]^2
+  mse_mle_var[k] <- var(mle_var) + bias_mle_var[k]^2
+  k = k + 1
+}
+
+cat("mean of ML sample\n", mc_mle_mean, '\n\n')
+cat("variance of ML sample\n", mc_mle_var, '\n\n')
+cat("bias's mean of ML sample\n", bias_mle_mean, '\n\n')
+cat("bias's variance of ML sample\n", bias_mle_var, '\n\n')
+cat("mse's mean of ML sample\n", mse_mle_mean, '\n\n')
+cat("mse's mean of ML sample\n", mse_mle_var, '\n\n')
+
+```
+
+## Use MLE to estimate parameter $shape$ and $rate$.
+
+The density of Gamma$\left(r, \lambda \right)$ is 
+$$
+f(x) = \frac{\lambda^r }{\Gamma(r)} x^{r-1}e^{-\lambda x}, \quad x \geq 0 
+$$
+The likelihood function is
+$$
+L(r, \lambda)=\frac{\lambda^{n r}}{\Gamma(r)^{n}} \prod_{i=1}^{n} x_{i}^{r-1} \exp \left(-\lambda \sum_{i=1}^{n} x_{i}\right), \quad x_{i} \geq 0
+$$
+and the log-likelihood function is
+$$
+\ell(r, \lambda)=n r \log \lambda-n \log \Gamma(r)+(r-1) \sum_{i=1}^{n} \log x_{i}-\lambda \sum_{i=1}^{n} x_{i}
+$$
+Find the simultaneous solutions $(r, \lambda)$ to
+$$
+\begin{aligned}
+\frac{\partial}{\partial \lambda} \ell(r, \lambda) &=\frac{n r}{\lambda}-\sum_{i=1}^{n} x_{i}=0 ; \\
+\frac{\partial}{\partial r} \ell(r, \lambda) &=n \log \lambda-n \frac{\Gamma^{\prime}(r)}{\Gamma(r)}+\sum_{i=1}^{n} \log x_{i}=0 .
+\end{aligned}
+$$
+We have
+$$
+\begin{gathered}
+\hat{\lambda}=\hat{r} / \bar{x} \\
+n \log \frac{\hat{r}}{\bar{x}}+\sum_{i=1}^{n} \log x_{i}-n \frac{\Gamma^{\prime}(\hat{r})}{\Gamma(\hat{r})}=0
+\end{gathered}
+$$
+Thus, the MLE $(\hat{r}, \hat{\lambda})$ is the simultaneous solution $(r, \lambda)$ of
+$$
+\log \lambda+\frac{1}{n} \sum_{i=1}^{n} \log x_{i}=\psi(\lambda \bar{x}) ; \quad \bar{x}=\frac{r}{\lambda}
+$$
+where $\psi(t)=\frac{d}{d t} \log \Gamma(t)=\Gamma^{\prime}(t) / \Gamma(t)$ (the _digamma_ function in $\mathrm{R}$ ). A numerical solution is easily obtained using the _uniroot_ function.
+
+In the following simulation experiment, random samples of size $n = 50$ and $n = 1000$ are generated from a Gamma$(r=10.111, \lambda = 1.107)$ distribution, and the parameters are estimated by optimizing the likelihood equations using _uniroot_. The sampling and estimation is repeated $m=20000$ times.
+
+when sample size is 50, (n=50):
+```{r}
+m <- 20000
+est <- matrix(0, m, 2)
+n <- 50
+r <- 10.111
+lambda <- 1.017
+
+obj <- function(lambda, xbar, logx.bar) {
+  digamma(lambda * xbar) - logx.bar - log(lambda)
+}
+for (i in 1:m) {
+  x <- rgamma(n, shape=r, rate=lambda)
+  xbar <- mean(x)
+  u <- uniroot(obj, lower = .001, upper = 10e5,
+  xbar = xbar, logx.bar = mean(log(x)))
+  est[i, ] <- c(xbar* u$root, u$root )
+}
+ML <- colMeans(est)
+print(ML)
+```
+
+```{r}
+hist(est[,1], breaks='scott', freq=FALSE, xlab='r', main='')
+points(ML[1], 0, cex=1.5, pch=20)
+
+hist(est[,2], breaks='scott', freq=FALSE, xlab=bquote(lambda), main='')
+points(ML[2], 0, cex=1.5, pch=20)
+```
+
+when sample size is 1000, (n=1000):
+```{r}
+m <- 20000
+est <- matrix(0, m, 2)
+n <- 1000
+r <- 10.111
+lambda <- 1.017
+
+obj <- function(lambda, xbar, logx.bar) {
+  digamma(lambda * xbar) - logx.bar - log(lambda)
+}
+for (i in 1:m) {
+  x <- rgamma(n, shape=r, rate=lambda)
+  xbar <- mean(x)
+  u <- uniroot(obj, lower = .001, upper = 10e5,
+  xbar = xbar, logx.bar = mean(log(x)))
+  est[i, ] <- c(xbar* u$root, u$root )
+}
+ML <- colMeans(est)
+print(ML)
+```
+
+```{r}
+hist(est[,1], breaks='scott', freq=FALSE, xlab='r', main='')
+points(ML[1], 0, cex=1.5, pch=20)
+
+hist(est[,2], breaks='scott', freq=FALSE, xlab=bquote(lambda), main='')
+points(ML[2], 0, cex=1.5, pch=20)
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+Gamma 分布的概率密度函数为：
+
+$$f(x;\alpha,\beta)=\frac{1}{\Gamma(\alpha)\beta^\alpha}x^{\alpha-1}e^{-\frac{x}{\beta}}$$
+
+其中 $\Gamma(\alpha)$ 是 Gamma 函数。
+
+我们对似然函数取对数得到：
+
+$$\begin{aligned} L(\alpha,\beta;x) &= \sum_{i=1}^n\log f(x_i;\alpha,\beta) \\ &= \sum_{i=1}^n\left[\log\frac{1}{\Gamma(\alpha)\beta^\alpha}+(\alpha-1)\log x_i - \frac{x_i}{\beta}\right] \end{aligned}$$
+
+对于给定的 $x_i$，让 $\frac{\partial L(\alpha,\beta;x_i)}{\partial\alpha}=0$ 和 $\frac{\partial L(\alpha,\beta;x_i)}{\partial\beta}=0$，解出 $\alpha$ 和 $\beta$ 的估计值。
+
+解出的结果为：
+
+$$\hat{\alpha} = \frac{\sum_{i=1}^n\log x_i - \frac{1}{n}\sum_{i=1}^n\log x_i}{1-\log\frac{1}{n}\sum_{i=1}^n\frac{1}{x_i}},\ \ \ \hat{\beta} = \frac{\sum_{i=1}^n x_i}{n\hat{\alpha}}$$
+
+其中的 $\hat{\alpha}$ 和 $\hat{\beta}$ 分别是 $\alpha$ 和 $\beta$ 的极大似然估计值。最终得到该分布的均值和方差的估计值为 $\hat{\mu}=\alpha\beta$ 和 $\hat{\sigma^2}=\alpha\beta^2$。
+
+
+

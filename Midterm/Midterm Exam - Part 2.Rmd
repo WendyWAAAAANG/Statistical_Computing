@@ -1,0 +1,149 @@
+---
+title: "DS4043 - MIDTERM Examination"
+author: 'Name: Ruoxin WANG         Grade: _________'
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+
+
+```{r setup, include=FALSE}
+library(knitr)
+# set global chunk options: images will be 7x5 inches
+knitr::opts_chunk$set(fig.width=7, fig.height=5)
+options(digits = 4)
+
+
+## indents are for indenting r code as formatted text
+## They may need to be adjusted depending on your OS
+# if your output looks odd, increase or decrease indent
+indent1 = '    '
+indent2 = '        '
+indent3 = '            '
+#library(tidyverse)
+#library(reshape2)
+```
+## Coding Part
+
+3. In this question, we will use the dataset called _painters_. We can simply call the data
+
+```{r indent=indent1}
+library(MASS)
+data(painters)
+```
+
+(a) Use help function to find the description of this data. 
+
+    The description is: The subjective assessment, on a 0 to 20 integer scale, of 54 classical painters. The painters were assessed on four characteristics: composition, drawing, colour and expression. The data is due to the Eighteenth century art critic, de Piles.
+
+(b) Select the data such that the _Composition_ score is greater or equal to 15 and make it a data frame called _HCpainters_. Print out _HCpainters_.
+
+```{r indent=indent1}
+# Put your code here
+HCpainters <- data.frame(painters[painters$Composition >= 15,])
+HCpainters
+```
+    
+(c) Create a new column vector Called _LowColour_ indicating if the _Colour_ score is less than 11 and append this column to _painters_. Show the first 10 rows. (This question is not related to (b))  
+```{r indent=indent1}
+# Put your code here
+LowColour <- painters$Colour < 11
+painters <- data.frame(painters, LowColour)
+head(painters, 10)
+``` 
+
+(d) Obtain the scatterplot matrix of the data _painters_ for the _Composition_, _Colour_ and _Expression_. Which pair of variables have the strongest positive linear relation.
+
+```{r indent=indent1, warning=FALSE}
+# Put your code here
+panel.d <- function(x, ...) {
+	usr <- par("usr"); on.exit(par(usr));
+	par(usr = c(usr[1:2], 0, .5))
+	lines(density(x))  # add density curve.
+}
+x <- scale(painters[, c('Composition', 'Colour', 'Expression')])
+r <- range(x)
+pairs(x, diag.panel = panel.d, xlim = r, ylim = r)
+```      
+Solution (Which pair): Composition and Expression.
+
+(e) Find the correlation matrix of _Composition_, _Drawing_, _Colour_ and _Expression_. Then get the correlation plot and make the visualization method as ellipse, the text label as red color, and use "diag=FALSE".
+
+```{r message=FALSE, indent=indent1, out.width="50%"}
+library(corrplot)
+# Put your code here
+corrMat <- cor(painters[, 1:4]);
+corrplot(corrMat, type = "upper", method = "ellipse", addCoef.col = "black", diag=FALSE, tl.col="red", tl.srt=45);
+```
+
+(f) Plot the Boxplot of _Composition_ by groups of _School_.
+
+```{r indent=indent1, out.width="50%"}
+# Put your code here
+boxplot(painters$Composition ~ painters$School, main="Boxplot of Composition by groups of school", xlab="painters$School", ylab = "painters$Composition", boxwex = .4)
+``` 
+
+4. Consider the following distribution with density function
+$$
+f(y) = \frac{r\beta^r}{(\beta+y)^{r+1}}, \quad y \geq 0.
+$$
+Use the inverse transform method to generate 1000 random observations from this distribution with $r = 3$ and $\beta = 4$. Print out the first 8 observations of the generated sample. Plot the density histogram of the total sample and plot the sample density curve on the histogram.
+    
+```{r indent=indent1, out.width="50%"}
+set.seed(24)
+# Put your code here
+n <- 1000;
+u <- runif(n);
+x <- ((192/u)^0.25)-4;
+# Print out the first 8 observations of the generated sample.
+head(x, 8)
+# Plot the density histogram of the total sample.
+hist(x, prob = TRUE)
+# Plot the sample density curve on the histogram.
+lines(density(x))
+``` 
+
+5. We want to compute a Monte Carlo estimate of
+$$
+\int_{0}^{\pi / 6} x\cos (x) \, dx
+$$
+using the importance sampling method. We choose three importance functions $f_1 = 1$ which is the density of Uniform(0,1), $f_2 =6/\pi$ which is the density of Uniform(0, $\pi/6$) and $f_3 = 2\cos (x), 0 <x<\pi/6$. Show your estimation results and their corresponding standard errors using 10000 replications. **(Hint: the code of the inverse of $sin()$ is $asin()$)**
+    
+```{r indent=indent1}
+set.seed(47)
+# Put your code here
+m <- 10000
+theta.hat <- se <- numeric(3)
+g <- function(x){
+  x*cos(x)*(x>0)*(x<pi/6)
+}
+
+# here we use f1.
+x <- runif(m)
+i <- c(which(x > pi/6), which(x < 0)) #indicator function.
+x[i] <- 2 #to catch overflow errors in g(x)
+fg <- g(x)
+theta.hat[1] <- mean(fg)
+se[1] <- sd(fg)
+
+# here we use f2.
+x <- runif(m, 0, pi/6)
+fg <- g(x) / (6/pi)
+theta.hat[2] <- mean(fg)
+se[2] <- sd(fg)
+
+# here we use f3.
+u <- runif(m) #inverse transform method
+x <- asin(u/2)
+#i <- c(which(x > pi/6), which(x < 0)) #indicator function.
+#x[i] <- 2 #to catch overflow errors in g(x)
+fg <- x/2
+#fg <- g(x) / (2*cos(x))
+theta.hat[3] <- mean(fg)
+se[3] <- sd(fg)
+
+rbind(theta.hat,se)
+```       
+    
+    

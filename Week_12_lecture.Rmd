@@ -1,0 +1,548 @@
+---
+title: 'DS4043: Introduction to Statistical Computing'
+author: "Dr. Zhijian Li"
+#date: "`r Sys.Date()`"
+output:
+  beamer_presentation: default
+  latex_engine: xelatex
+  html_document: default
+  html_notebook:
+    colortheme: default
+  ioslides_presentation:
+    widescreen: true
+    colortheme: default
+    css: ../custom.css
+    fontfamily: mathpazo
+    wide: yes
+  slidy_presentation: default
+---
+
+
+## Numerical Methods in R - Outline
+
+- Root Finding in One Dimension 
+- Numerical Integration
+- Maximum Likelihood Problems 
+- R Function for Optimization
+- One-dimensional Optimization
+- Maximum Likelihood Estimation with mle 
+- Two-dimensional Optimization
+- The EM Algorithm
+
+
+## Root Finding in One Dimension
+
+- Bisection method 
+- Brent’s method
+
+## Bisection method 
+
+- If $f(x)$ is continuous on $[a, b]$, and $f(a), f(b)$ have opposite signs, then by the intermediate value theorem it follows that $f(c)=0$ for some $a<c<b$.
+- The bisection method simply checks the sign of $f(x)$ at the midpoint $x=(a+b) / 2$ of the interval at each iteration. If $f(a)$, $f(x)$ have opposite signs, then the interval is replaced by $[a, x]$ and otherwise it is replaced by $[x, b]$.
+- At each iteration, the length of the interval containing the root decreases by half. The method cannot fail, and the number of iterations needed to achieve a specified tolerance is known in advance.
+- If the initial interval $[a, b]$ contains more than one root, then bisection will find one of the roots.
+The rate of convergence of the bisection algorithm is linear.
+
+## Example (Solve $f(x)=0$)
+
+- Solve $a^{2}+y^{2}+\frac{2ay}{n-1}=n-2$, where $a$ is a specified constant and $n>2$ is an integer. The exact solution is
+$$
+  y=\frac{-a}{n-1} \pm \sqrt{n-2-a^{2}+\left(\frac{a}{n-1}\right)^{2}}
+$$
+- Apply the bisection method, find the solutions of
+$$
+    f(y)=a^{2}+y^{2}+\frac{2 a y}{n-1}-(n-2)=0
+$$
+
+- The first step is to code the function $f$. The next step is to determine an interval such that $f(y)$ has opposite signs at the endpoints. For example, if $a=1/2$ and $n=20$, there will be a positive and a negative root. In the following, the positive root is found, starting from the interval $(0,5n)$.
+     
+## Example (Solve $f(x)=0$)
+      
+```{r}
+f <- function(y, a, n) {
+  a^2 + y^2 + 2*a*y/(n-1) - (n-2)
+}
+a <- 0.5; n <- 20
+b0 <- 0; b1 <- 5*n 
+#solve using bisection
+it <- 0
+eps <- .Machine$double.eps^0.25
+r <- seq(b0, b1, length=3)
+y <- c(f(r[1], a, n), f(r[2], a, n), f(r[3], a, n)) 
+if (y[1] * y[3] > 0)
+    stop("f does not have opposite sign at endpoints")
+```
+
+## Example (Solve $f(x)=0$)
+
+Our exact formula gives the roots $y = 4.186841, -4.239473$.
+
+```{r}
+while(it < 1000 & abs(y[2]) > eps) { 
+it <- it + 1
+if (y[1]*y[2] < 0) { r[3] <- r[2]; y[3] <- y[2]} 
+  else { r[1] <- r[2]; y[1] <- y[2] }
+        r[2] <- (r[1] + r[3]) / 2
+        y[2] <- f(r[2], a=a, n=n) 
+        print(c(r[1], y[1], y[3]-y[2]))
+}
+```
+
+## Brent's method
+      
+Brent's method combines the root bracketing and bisection with inverse quadratic interpolation. It fits $x$ as a quadratic function of $y$. If the three points are $(a, f(a)),(b, f(b)),(c, f(c))$, with $b$ as the current best estimate, the next estimate for the root is found by interpolation, setting $y=0$ in the Lagrange interpolation polynomial
+$$
+\begin{aligned}
+x &=\frac{[y-f(a)][y-f(b)] c}{[f(c)-f(a)][f(c)-f(b)]} \\
+&+\frac{[y-f(b)][y-f(c)] a}{[f(a)-f(b)][f(a)-f(c)]}+\frac{[y-f(c)][y-f(a)] b}{[f(b)-f(c)][f(b)-f(a)]}
+\end{aligned}
+$$
+If this estimate is outside of the interval known to bracket the root, bisection is used at this step. Brent's method is generally faster than bisection.
+      
+Brent's method is implemented in the $R$ function uniroot, which searches for a zero of a univariate function between two points where the function has opposite signs.
+
+## Example (Solving $f(x)=0$ with Brent's method: uniroot)
+Solve
+$$
+  a^{2}+y^{2}+\frac{2 a y}{n-1}=n-2
+$$
+with $a=0.5, n=20$ as in the previous example. The first step is to code the function $f$. This function is not complicated, so we code this function inline in the uniroot statement. The next step is to determine an interval such that $f(y)$ has opposite signs at the endpoints.
+  
+## Example (Solving $f(x)=0$ with Brent's method: uniroot)
+
+Our exact formula gives $y = 4.186841, -4.239473$.
+```{r}
+a <- 0.5; n <- 20
+out <- uniroot( 
+  function(y){ a^2 + y^2 + 2*a*y/(n-1) - (n-2) }, 
+  lower = 0, upper = n*5 )
+unlist(out)
+
+out <- uniroot( 
+  function(y){ a^2 + y^2 + 2*a*y/(n-1) - (n-2) }, 
+  lower = -n*5, upper = 0 )
+out$root
+```
+Note: See _polyroot_ to find zeroes of a polynomial
+
+## Numerical Integration
+
+Basic numerical integration using the integrate function is illustrated in the following examples, where useful functions are developed for the density and cdf of the sample correlation statistic.
+
+- Non-adaptive 
+- Adaptive
+
+## Numerical Integration - Non-adaptive
+
+- Apply the same rules over the entire range of integration 
+- The integrand is evaluated at a finite set of points and a weighted sum of these function values is used to obtain the estimate, i.e. $\int_{a}^{b} f(x) \approx \sum_{i=0}^{n} f\left(x_{i}\right) w_{i}$.
+- Trapezoidal rule
+- Quadrature method
+
+## Numerical Integration - Non-adaptive
+
+- For example, the trapezoidal rule divides $[a, b]$ into $n$ equal length subintervals length $h=(b-a)/n$, with endpoints $x_{0}, x_{1}, \ldots, x_{n}$, and uses the area of the trapezoid to estimate the integral over each subinterval. The estimate on $\left(x_{i}, x_{i+1}\right)$ is $\left(f\left(x_{i}\right)+f\left(x_{i+1}\right)\right)(h / 2)$. The numerical estimate of $\int_{a}^{b} f(x) d x$ is
+$$
+  \frac{h}{2} f(a)+h \sum_{i=1}^{n-1} f\left(x_{i}\right)+\frac{h}{2} f(b)
+$$
+- Evaluate the integrand at a finite set of points (nodes), but these nodes need not be evenly spaced.
+ 
+## Adaptive
+
+- When an integrand behaves well in one part of the range of integration, but not so well in another part, it helps to treat each part differently.
+- Adaptive methods choose the sub-intervals based on the local behavior of the integrand.
+- The _integrate_ function provided in R uses an adaptive quadrature method to find the approximate value of the integral of a one variable function.
+
+## Example (Numerical integration with integrate)
+
+Compute $\int_{0}^{\infty} \frac{1}{(\cosh y-\rho r)^{n-1}} dy$, where $-1<\rho<1,-1<r<1$ are constants and $n \geq 2$ is an integer. We apply adaptive quadrature implemented by the integrate function provided in R. A simple way to compute the integral for fixed parameters, say ( $n=10, r=0.5, \rho=0.2$ ) is
+
+```{r}
+integrate(function(y){(cosh(y)-0.1)^(-9)}, 0, Inf)
+```
+
+## Example (Numerical integration with integrate)
+
+The integral for arbitrary $(n, r, \rho)$
+```{r}
+f <- function(y, n, r, rho) { (cosh(y) - rho * r)^(1 - n)
+}
+integrate(f, lower=0, upper=Inf, 
+  rel.tol=.Machine$double.eps^0.25, n=10, r=0.5, rho=0.2)
+```
+
+## Example (Numerical integration with integrate)
+
+To see how the result depends on $\rho$, fix $n=10$ and $r=0.5$ and plot the value of the integral as a function of $\rho$.
+```{r out.width="50%"}
+ro <- seq(-.99, .99, .01)
+v <- rep(0, length(ro))
+for(i in 1:length(ro)) {
+v[i] <- integrate(f, lower=0, upper=Inf, 
+rel.tol=.Machine$double.eps^0.25, n=10, 
+r=0.5, rho=ro[i])$value }
+plot(ro, v, type="l", xlab=expression(rho), 
+     ylab="Integral Value (n=10, r=0.5)")
+```
+
+
+
+## Maximum Likelihood Problems
+
+If $X_{1}, \ldots, X_{n}$ are iid random sample with density $f(x ; \theta)$, then the likelihood function is
+$$
+L(\theta)=\prod_{i=1}^{n} f\left(x_{i} ; \theta\right) .
+$$
+A maximum likelihood estimate of $\theta$ is a value $\hat{\theta}$ that maximize $L(\theta)$ or $\mathrm{I}(\theta)$, where
+$$
+l(\theta)=\log L(\theta)=\sum_{i=1}^{n} \log f\left(x_{i} ; \theta\right)
+$$
+
+## Example (MLE using mle)
+
+Suppose $Y_{1}, Y_{2}$ are i.i.d. with density $f(y)=\theta e^{-\theta y}, y>0$. Find the MLE of $\theta$.
+By independence,
+$$
+L(\theta)=\left(\theta e^{-\theta y_{1}}\right)\left(\theta e^{-\theta y_{2}}\right)=\theta^{2} e^{-\theta\left(y_{1}+y_{2}\right)} .
+$$
+Thus $\ell(\theta)=2 \log \theta-\theta\left(y_{1}+y_{2}\right)$ and the log-likelihood equation to be solved is
+$$
+\frac{d}{d \theta} \ell(\theta)=\frac{2}{\theta}-\left(y_{1}+y_{2}\right)=0, \quad \theta>0
+$$
+The unique solution is $\hat{\theta}=2 /\left(y_{1}+y_{2}\right)$, which maximizes $L(\theta)$. Therefore, the MLE is the reciprocal of the sample mean in this example.
+
+## Example (MLE using mle)
+
+Let us see how the problem can be solved numerically using the _mle_ (stats4) function.
+```{r}
+#the observed sample
+y <- c(0.04304550, 0.50263474)
+mlogL <- function(theta=1){
+#minus log-likelihood of exp. density, rate 1/theta 
+return(-(length(y) * log(theta) - theta * sum(y))) }
+
+```
+## Example (MLE using mle)
+
+```{r}
+library(stats4) 
+fit <- mle(mlogL) 
+summary(fit)
+```
+## Example (MLE using mle)
+
+Alternately, the initial value for the optimizer could be supplied in the call to mle; two examples are
+```{r}
+mle(mlogL, start=list(theta=1)) 
+mle(mlogL, start=list(theta=mean(y)))
+```
+## Optimization - Introduction
+
+- We have seen a maximization problem in the MLE example. 
+- We consider a problem to maximize $f(\boldsymbol{\theta})$ or minimize $-f(\boldsymbol{\theta})$. 
+- Some optimization problems can be solved analytically. 
+- Numerical methods of optimization are applied for problems which cannot readily be solved analytically.
+
+## R Function Optimization
+
+- optimize
+- optim
+- constrOptim 
+- nlm
+- mle
+
+## optimize
+
+Searches for the minimum (by default) or maximum of a continuous univariate function, by combining golden section search and parabolic interpolation.
+
+## optim
+
+- Offers a selection of several methods, for a parameter vector $\theta \in \mathbb{R}^{p}$ 
+- Nelder-Mead: robust but slower to converge; it uses only function values, does not require derivatives so it can be applied to discontinuous objective functions.
+- BFGS: the most popular quasi-Newton method.
+- L-BFGS-B: BFGS with lower and upper bounds, i.e., box constraints. 
+- CG : conjugate gradients.
+- SANN: simulated annealing, a stochastic optimization method. 
+- Brent: for a single parameter, using optimize.
+
+## constrOptim, nlm, mle
+
+- constrOptim: linearly constrained optimization; minimize a function subject to linear inequality constraints.
+- nlm: nonlinear minimization.
+- mle: a wrapper for optim designed for maximum likelihood problems.
+
+## One-dimensional Optimization
+
+- Many types of problems can be restated so that the root-finding function _uniroot_ can be applied.
+- Consider the following: Example (One-dimensional optimization with optimize)
+- Maximize the function $f(x)=\frac{\log (1+\log (x))}{\log (1+x)}$ with respect to $x$.
+
+```{r out.width="40%"}
+f <- function(x) log(x + log(x))/log(1+x) 
+curve(f(x), from = 2, to = 15, ylab = "f(x)")
+```
+
+## Example (One-dimensional optimization with optimize)
+
+The graph of $f(x)$ shows that the maximum occurs between 4 and 8. Apply _optimize_ on the interval (4, 8). The default is to minimize the function. To maximize $f(x)$, set _maximum = TRUE_. The default tolerance is _.Machine$double.eps^0.25_.
+
+```{r}
+optimize(f, lower = 4, upper = 8, maximum = TRUE)
+```
+
+
+## Maximum Likelihood Estimation with mle
+
+- The _mle_ function in the package _stats4_ is a wrapper for _optim_.
+- BFGS (a quasi-Newton method) by default.
+- The first argument _minuslogl_ is the name of a user-defined function to compute the negative log-likelihood.
+- Other parameters might be required depending on which optimization method is selected.
+- Refer to the documentation for _optim_ for details.
+
+## Example (MLE: Gamma distribution)
+
+- Let $x_{1}, \ldots, x_{n}$ be a random sample from a Gamma$\left(r, \lambda \right)$ distribution ( $r$ is the shape parameter and $\lambda$ is the rate parameter). In this example, $\boldsymbol{\theta}=(r, \lambda)^{\top} \in \mathbb{R}^{2}$. Find the maximum likelihood estimator of $\boldsymbol{\theta}=(r, \lambda)$.
+- The density of Gamma$\left(r, \lambda \right)$ is 
+$$
+f(x) = \frac{\lambda^r }{\Gamma(r)} x^{r-1}e^{-\lambda x}, \quad x \geq 0 
+$$
+
+## Example (MLE: Gamma distribution)
+
+The likelihood function is
+$$
+L(r, \lambda)=\frac{\lambda^{n r}}{\Gamma(r)^{n}} \prod_{i=1}^{n} x_{i}^{r-1} \exp \left(-\lambda \sum_{i=1}^{n} x_{i}\right), \quad x_{i} \geq 0
+$$
+and the log-likelihood function is
+$$
+\ell(r, \lambda)=n r \log \lambda-n \log \Gamma(r)+(r-1) \sum_{i=1}^{n} \log x_{i}-\lambda \sum_{i=1}^{n} x_{i}
+$$
+
+## Example (MLE: Gamma distribution)
+
+Find the simultaneous solutions $(r, \lambda)$ to
+$$
+\begin{aligned}
+\frac{\partial}{\partial \lambda} \ell(r, \lambda) &=\frac{n r}{\lambda}-\sum_{i=1}^{n} x_{i}=0 ; \\
+\frac{\partial}{\partial r} \ell(r, \lambda) &=n \log \lambda-n \frac{\Gamma^{\prime}(r)}{\Gamma(r)}+\sum_{i=1}^{n} \log x_{i}=0 .
+\end{aligned}
+$$
+We have
+$$
+\begin{gathered}
+\hat{\lambda}=\hat{r} / \bar{x} \\
+n \log \frac{\hat{r}}{\bar{x}}+\sum_{i=1}^{n} \log x_{i}-n \frac{\Gamma^{\prime}(\hat{r})}{\Gamma(\hat{r})}=0
+\end{gathered}
+$$
+
+## Example (MLE: Gamma distribution)
+
+Thus, the MLE $(\hat{r}, \hat{\lambda})$ is the simultaneous solution $(r, \lambda)$ of
+$$
+\log \lambda+\frac{1}{n} \sum_{i=1}^{n} \log x_{i}=\psi(\lambda \bar{x}) ; \quad \bar{x}=\frac{r}{\lambda}
+$$
+where $\psi(t)=\frac{d}{d t} \log \Gamma(t)=\Gamma^{\prime}(t) / \Gamma(t)$ (the _digamma_ function in $\mathrm{R}$ ). A numerical solution is easily obtained using the _uniroot_ function.
+
+- In the following simulation experiment, random samples of size $n = 200$ are generated from a Gamma$(r= 5, \lambda = 2)$ distribution, and the parameters are
+estimated by optimizing the likelihood equations using _uniroot_. The sampling and estimation is repeated $m=20000$ times.
+
+## Example (MLE: Gamma distribution)
+
+```{r}
+m <- 20000
+est <- matrix(0, m, 2)
+n <- 200
+r <- 5
+lambda <- 2
+obj <- function(lambda, xbar, logx.bar) { 
+  digamma(lambda * xbar) - logx.bar - log(lambda) }
+for (i in 1:m) { x <- rgamma(n, shape=r, rate=lambda)
+xbar <- mean(x)
+u <- uniroot(obj, lower = .001, upper = 10e5, 
+             xbar = xbar, logx.bar = mean(log(x)))
+est[i, ] <- c(xbar* u$root, u$root )
+}
+ML <- colMeans(est) ; print(ML)
+```
+
+## Example (MLE: Gamma distribution)
+
+```{r out.width="60%"}
+hist(est[, 1], breaks="scott", freq=FALSE, 
+     xlab="r", main="")
+points(ML[1], 0, cex=1.5, pch=20)
+```
+
+## Example (MLE: Gamma distribution)
+
+```{r out.width="60%"}
+hist(est[, 2], breaks="scott", freq=FALSE, 
+     xlab=bquote(lambda), main="")
+points( ML[2], 0, cex=1.5, pch=20 )
+```
+
+## Two-dimensional Optimization
+
+- The syntax for optim is
+
+  _optim(par, fn, gr = NULL, method =c("Nelder-Mead", "BFGS", "CG", "L-BFGS-B", "SANN"), lower = -Inf, upper = Inf, control = list(), hessian = FALSE, ...)_
+  
+- The default method is Nelder-Mead. The first argument _par_ is a vector
+of initial values of the target parameters, and _fn_ is the objective
+function. The first argument to _fn_ is the vector of target parameters
+and its return value should be a scalar.
+
+## Example (Two-dimensional optimization with optim)
+
+The objective function to be maximized is the log-likelihood function
+$$
+\log L(\theta \mid x)=n r \log \lambda+(r-1) \sum_{i=1}^{n} \log x_{i}-\lambda \sum_{i=1}^{n} x_{i}-n \log \Gamma(r)
+$$
+and the parameters are $\theta=(r, \lambda)$. The log-likelihood function is implemented as
+
+```{r}
+LL <- function(theta, sx, slogx, n) {
+r <- theta[1]
+lambda <- theta[2]
+loglik <- n * r * log(lambda) + (r - 1) * slogx -
+  lambda * sx - n * log(gamma(r))
+- loglik
+}
+```
+
+## Example (Two-dimensional optimization with optim)
+
+```{r}
+r <- 5; lambda <- 2; x <- rgamma(n, shape=r, rate=lambda)
+optim(c(1,1), LL, sx=sum(x), slogx=sum(log(x)), n=n)
+```
+
+## Example (Two-dimensional optimization with optim)
+
+The simulation experiment below repeats the estimation procedure for comparison with the results, i.e.
+
+```{r}
+mlests <- replicate(20000, expr = {
+x <- rgamma(200, shape = 5, rate = 2)
+optim(c(1,1), LL, sx=sum(x), slogx=sum(log(x)), n=n)$par
+})
+colMeans(t(mlests))
+```
+
+## Example (MLE for a quadratic form)
+
+Consider the problem of estimating the parameters of a quadratic form of centered Gaussian random variables given by
+$$
+Y=\lambda_{1} X_{1}^{2}+\lambda_{2} X_{2}^{2}+\cdots+\lambda_{k} X_{k}^{2}
+$$
+where $X_{j}$ are iid standard normal random variables, $j=1, \ldots, k$, and $\lambda_{1}>\cdots>\lambda_{k}>0$. By elementary transformations, each $Y_{j}=\lambda_{j} X_{j}^{2}$ has a gamma distribution with shape parameter $1 / 2$ and rate parameter $1 /\left(2 \lambda_{j}\right)$, $j=1, \ldots, k$. Hence $Y$ can be represented as the mixture of the $k$ independent gamma variables,
+$$
+Y \stackrel{D}{=} \frac{1}{k} G\left(\frac{1}{2}, \frac{1}{2 \lambda_{1}}\right)+\cdots+\frac{1}{k} G\left(\frac{1}{2}, \frac{1}{2 \lambda_{k}}\right).
+$$
+
+## Example (MLE for a quadratic form)
+
+- Assume that $\sum_{j=1}^{k} \lambda_{j}=1$. Suppose a random sample $y_{1}, \ldots, y_{m}$ is observed from the distribution of $Y$, and $k=3$. Find the maximum likelihood estimate of the parameters $\lambda_{j}, j=1,2,3$.
+
+- This problem can be approached by numerical optimization of the loglikelihood function with two unknown parameters, $\lambda_{1}$ and $\lambda_{2}$. The density of the mixture is
+$$
+f(y \mid \lambda)=\frac{1}{3} \sum_{j=1}^{3} f_{j}(y \mid \lambda)
+$$
+where $f_{j}(y \mid \lambda)$ is the gamma density with shape parameter $1 / 2$ and rate parameter $1 /\left(2 \lambda_{j}\right)$. The log-likelihood can be written in terms of two unknown parameters $\lambda_{1}$ and $\lambda_{2}$, with $\lambda_{3}=1-\lambda_{1}-\lambda_{2}$.
+
+## Example (MLE for a quadratic form)
+
+```{r}
+LL <- function(lambda, y) {
+lambda3 <- 1 - sum(lambda)
+f1 <- dgamma(y, shape=1/2, rate=1/(2*lambda[1]))
+f2 <- dgamma(y, shape=1/2, rate=1/(2*lambda[2]))
+f3 <- dgamma(y, shape=1/2, rate=1/(2*lambda3))
+f <- f1/3 + f2/3 + f3/3 #density of mixture
+return( -sum(log(f))) #returning -loglikelihood
+}
+```
+
+## Example (MLE for a quadratic form)
+
+The sample data in this example is generated from the quadratic form with $\lambda=(0.60,0.25,0.15)$. Then the optim function is applied to search for the minimum of LL, starting with initial estimates $\lambda=(0.5,0.3,0.2)$.
+
+```{r}
+set.seed(543)
+m <- 2000
+lambda <- c(.6, .25, .15) #rate is 1/(2 lambda)
+lam <- sample(lambda, size = 2000, replace = TRUE)
+y <- rgamma(m, shape = .5, rate = 1/(2*lam))
+opt <- optim(c(.5,.3), LL, y=y)
+theta <- c(opt$par, 1 - sum(opt$par))
+theta
+```
+
+## The EM Algorithm
+
+- The Expectation–Maximization algorithm is a general optimization
+method that is often applied to find maximum likelihood estimates
+when data are incomplete.
+- In the E step, compute the conditional expectation of a log-likelihood
+function given the observed data and current parameter estimates.
+- In the M step, the conditional expectation is maximized with respect
+to the target parameter.
+- Update the estimates and iteratively repeat the E and M steps until
+the algorithm converges according to some criterion.
+
+## Example (EM algorithm for a mixture model)
+
+In this example, the EM algorithm is applied to estimate the parameters of the quadratic form introduced in the previous example. Recall that the problem can be formulated as estimation of the rate parameters of a mixture of gamma random variables. Although the EM algorithm is not the best approach for this problem, as an exercise we repeat the estimation for $k = 3$ components (two unknown parameters) as outlined in the previous Example.
+
+## Example (EM algorithm for a mixture model)
+
+The EM algorithm first updates the posterior probability $p_{i j}$ that the $i^{t h}$ sample observation $y_{i}$ was generated from the $j^{th}$ component. At the $t^{th}$ step,
+$$
+p_{i j}^{(t)}=\frac{\frac{1}{k} f_{j}\left(y_{i} \mid y, \lambda^{(t)}\right)}{\sum_{j=1}^{k} \frac{1}{k} f_{j}\left(y_{j} \mid y, \lambda^{(t)}\right)},
+$$
+where $\lambda^{(t)}$ is the current estimate of the parameters $\left\{\lambda_{j}\right\}$, and $f_{j}\left(y_{i} \mid y, \lambda^{(t)}\right)$ is the $\operatorname{Gamma}\left(1 / 2,1 /\left(2 \lambda_{j}^{(t)}\right)\right)$ density evaluated at $y_{i}$. Note that the mean of the $j^{t h}$ component is $\lambda_{j}$ so the updating equation is
+$$
+\mu_{j}^{(t+1)}=\frac{\sum_{i=1}^{m} p_{i j}^{(t)} y_{i}}{\sum p_{i j}^{(t)}}
+$$
+
+## Example (EM algorithm for a mixture model)
+
+In order to compare the estimates, we generate the data from the mixture $Y$ using the same random number seed as in our previous Example.
+```{r}
+set.seed(543)
+lambda <- c(.6, .25, .15)  #rate is 1/(2lambda)
+lam <- sample(lambda, size = 2000, replace = TRUE)
+y <- rgamma(m, shape = .5, rate = 1/(2*lam))
+N <- 10000   #max. number of iterations
+L <- c(.5, .4, .1) #initial est. for lambdas
+tol <- .Machine$double.eps^0.5
+L.old <- L + 1
+```
+
+
+## Example (EM algorithm for a mixture model)
+
+```{r}
+for (j in 1:N) {
+f1 <- dgamma(y, shape=1/2, rate=1/(2*L[1]))
+f2 <- dgamma(y, shape=1/2, rate=1/(2*L[2]))
+f3 <- dgamma(y, shape=1/2, rate=1/(2*L[3]))
+py <- f1 / (f1 + f2 + f3) #posterior prob y from 1
+qy <- f2 / (f1 + f2 + f3) #posterior prob y from 2
+ry <- f3 / (f1 + f2 + f3) #posterior prob y from 3
+mu1 <- sum(y * py) / sum(py) #update means
+mu2 <- sum(y * qy) / sum(qy)
+mu3 <- sum(y * ry) / sum(ry)
+L <- c(mu1, mu2, mu3) #update lambdas
+L <- L / sum(L)
+if (sum(abs(L - L.old)/L.old) < tol) break
+L.old <- L
+}
+```
+
+## Example (EM algorithm for a mixture model)
+
+```{r}
+print(list(lambda = L/sum(L), iter = j, tol = tol))
+```
+
